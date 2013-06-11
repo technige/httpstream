@@ -20,7 +20,7 @@ from distutils.core import setup
 
 setup(
     name="httpstream",
-    version="0.1",
+    version="0.2",
     description="Stream based HTTP client",
     long_description="",
     author="Nigel Small",
@@ -28,7 +28,11 @@ setup(
     url="https://github.com/nigelsmall/httpstream",
     scripts=[],
     package_dir={"": "src"},
-    packages=["httpstream"],
+    packages=[
+        "httpstream",
+        "httpstream.packages",
+        "httpstream.packages.jsonstream",
+    ],
     license="Apache License, Version 2.0",
     classifiers=[
         "Intended Audience :: Developers",
