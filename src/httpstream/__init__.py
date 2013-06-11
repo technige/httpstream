@@ -16,5 +16,4 @@
 # limitations under the License.
 
 
-from .http import Connection
-from .rest import Resource
+from .http import Resource

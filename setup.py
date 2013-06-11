@@ -25,6 +25,7 @@ setup(
     long_description="",
     author="Nigel Small",
     author_email="nigel@nigelsmall.com",
+    url="https://github.com/nigelsmall/httpstream",
     scripts=[],
     package_dir={"": "src"},
     packages=["httpstream"],
