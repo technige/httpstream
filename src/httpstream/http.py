@@ -23,7 +23,7 @@ except ImportError:
 import json
 from threading import local
 
-from .packages.jsonstream import JSONStream
+from jsonstream import JSONStream
 
 from .uri import URI
 
@@ -121,17 +121,17 @@ class Response(object):
         self._method = method
         self.__uri__ = URI(uri)
         self._headers = headers or {}
+        scheme, host, port = self.__uri__.scheme, self.__uri__.hostname, self.__uri__.port
         if isinstance(body, dict):
             self._body = json.dumps(body, separators=(",", ":"))
             self._headers.setdefault("Content-Type", "application/json")
+            self._headers.setdefault("Host", host)
         else:
             self._body = body
-        scheme, port = self.__uri__.scheme, self.__uri__.port
         if not port:
             port = 443 if scheme == "https" else 80
         try:
-            self._http = ConnectionPool.acquire(scheme, self.__uri__.hostname,
-                                                port)
+            self._http = ConnectionPool.acquire(scheme, host, port)
         except KeyError:
             raise ValueError("Unsupported URI scheme {0}".format(
                 repr(self.__uri__.scheme)))

@@ -29,9 +29,8 @@ setup(
     scripts=[],
     package_dir={"": "src"},
     packages=[
+        "jsonstream",
         "httpstream",
-        "httpstream.packages",
-        "httpstream.packages.jsonstream",
     ],
     license="Apache License, Version 2.0",
     classifiers=[
