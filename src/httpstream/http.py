@@ -138,11 +138,12 @@ class RequestResponse(object):
         try:
             self._http.request(method, self.__uri__.path, self._body, headers or {})
             self._response = self._http.getresponse()
-        except BadStatusLine:
-            self._http.close()
-            self._http.connect()
-            self._http.request(method, self.__uri__.path, self._body, headers or {})
-            self._response = self._http.getresponse()
+        except BadStatusLine as err:
+            if err.line == repr(""):
+                self._http.close()
+                self._http.connect()
+                self._http.request(method, self.__uri__.path, self._body, headers or {})
+                self._response = self._http.getresponse()
         self._kwargs = kwargs
 
     def __getitem__(self, key):
