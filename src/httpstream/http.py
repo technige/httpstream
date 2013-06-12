@@ -114,7 +114,7 @@ class ConnectionPool(object):
         puddle.release(connection)
 
 
-class RequestResponse(object):
+class Response(object):
 
     def __init__(self, method, uri, body=None, headers=None, **kwargs):
         # TODO: tidy this up a bit!
@@ -135,14 +135,18 @@ class RequestResponse(object):
         except KeyError:
             raise ValueError("Unsupported URI scheme {0}".format(
                 repr(self.__uri__.scheme)))
+        if self.__uri__.query:
+            path = self.__uri__.path + "?" + self.__uri__.query
+        else:
+            path = self.__uri__.path
         try:
-            self._http.request(method, self.__uri__.path, self._body, headers or {})
+            self._http.request(method, path, self._body, headers or {})
             self._response = self._http.getresponse()
         except BadStatusLine as err:
             if err.line == repr(""):
                 self._http.close()
                 self._http.connect()
-                self._http.request(method, self.__uri__.path, self._body, headers or {})
+                self._http.request(method, path, self._body, headers or {})
                 self._response = self._http.getresponse()
         self._kwargs = kwargs
 
@@ -179,7 +183,7 @@ class RequestResponse(object):
             ]
         except AttributeError:
             return None
-        return content_type[0].partition("/")[0::2]
+        return content_type[0]
 
     @property
     def charset(self):
@@ -215,7 +219,7 @@ class RequestResponse(object):
                 ConnectionPool.release(self._http)
                 self._http = None
         iterator = response_iterator(self._kwargs.get("chunk_size"))
-        if self.content_type == ("application", "json"):
+        if self.content_type in ("application/json", "application/x-javascript"):
             return iter(JSONStream(iterator))
         else:
             return iterator
@@ -227,13 +231,13 @@ class Resource(object):
         self.__uri__ = URI(uri)
 
     def get(self, headers=None, **kwargs):
-        return RequestResponse("GET", self.__uri__, headers, **kwargs)
+        return Response("GET", self.__uri__, headers, **kwargs)
 
     def put(self, body, headers=None, **kwargs):
-        return RequestResponse("PUT", self.__uri__, body, headers, **kwargs)
+        return Response("PUT", self.__uri__, body, headers, **kwargs)
 
     def post(self, body, headers=None, **kwargs):
-        return RequestResponse("POST", self.__uri__, body, headers, **kwargs)
+        return Response("POST", self.__uri__, body, headers, **kwargs)
 
     def delete(self, headers=None, **kwargs):
-        return RequestResponse("DELETE", self.__uri__, headers, **kwargs)
+        return Response("DELETE", self.__uri__, headers, **kwargs)
