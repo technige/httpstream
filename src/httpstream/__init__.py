@@ -17,3 +17,4 @@
 
 
 from .http import Resource
+from .uri import URI
