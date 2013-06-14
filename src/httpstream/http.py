@@ -297,7 +297,7 @@ class Response(object):
 class Resource(object):
 
     def __init__(self, uri):
-        self._uri = uri
+        self._uri = str(uri)
 
     @property
     def __uri__(self):
@@ -309,10 +309,10 @@ class Resource(object):
     def get(self, headers=None, **kwargs):
         return self.request("GET", None, headers).submit(**kwargs)
 
-    def put(self, body, headers=None, **kwargs):
+    def put(self, body=None, headers=None, **kwargs):
         return self.request("PUT", body, headers).submit(**kwargs)
 
-    def post(self, body, headers=None, **kwargs):
+    def post(self, body=None, headers=None, **kwargs):
         return self.request("POST", body, headers).submit(**kwargs)
 
     def delete(self, headers=None, **kwargs):

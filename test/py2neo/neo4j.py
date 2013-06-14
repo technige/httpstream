@@ -1,6 +1,8 @@
 
 
-from httpstream import Resource
+from httpstream import Resource as _Resource, URI
+
+from .mixins import Cacheable
 
 
 DEFAULT_SCHEME = "http"
@@ -8,8 +10,9 @@ DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 7474
 
 
-class NeoResource(object):
-    """ Basic RESTful web resource with JSON metadata.
+class Resource(object):
+    """ Basic RESTful web resource with JSON metadata. Wraps an
+    `httpstream.Resource`.
     """
 
     class Metadata(object):
@@ -25,26 +28,8 @@ class NeoResource(object):
         def __iter__(self):
             return iter(self._metadata.items())
 
-    class Request(object):
-
-        def __init__(self, request):
-            self.request = request
-
-        def __repr__(self):
-            return repr(self.for_batch())
-
-        def for_batch(self, **params):
-            obj = {
-                "method": str(self.request.method),
-                "to": self.request.uri.reference,
-            }
-            if self.request.body:
-                obj["body"] = self.request.body
-            obj.update(**params)
-            return obj
-
     def __init__(self, uri):
-        self._resource = Resource(uri)
+        self._resource = _Resource(uri)
         self._metadata = None
 
     @property
@@ -64,47 +49,52 @@ class NeoResource(object):
     def refresh(self):
         """ Refresh resource metadata.
         """
-        self._metadata = NeoResource.Metadata(self._resource)
+        self._metadata = Resource.Metadata(self._resource)
 
-    def request(self, method, body=None, headers=None):
-        return NeoResource.Request(self._resource.request(method, body,
-                                                          headers))
+    def _request(self, method, body=None, headers=None):
+        return self._resource.request(method, body, headers)
+
+    def _get(self, headers=None):
+        return self._resource.get(headers)
+
+    def _put(self, body=None, headers=None):
+        return self._resource.put(body, headers)
+
+    def _post(self, body=None, headers=None):
+        return self._resource.post(body, headers)
+
+    def _delete(self, headers=None):
+        return self._resource.delete(headers)
+
+    def _subresource(self, *parts):
+        return Resource(URI.join(self.__uri__, *parts))
 
 
-class CacheableNeoResource(NeoResource):
-    """ Resource with cached instances.
-    """
-
-    _instances = {}
-
-    @classmethod
-    def get_instance(cls, uri):
-        if uri not in cls._instances:
-            cls._instances[uri] = cls(uri)
-        return cls._instances[uri]
-
-
-class ServiceRoot(CacheableNeoResource):
+class ServiceRoot(Cacheable, Resource):
     """ Neo4j REST API service root resource.
     """
 
     def __init__(self, uri=None):
         if uri is None:
             uri = "http://localhost:7474"
-        CacheableNeoResource.__init__(self, uri)
+        Resource.__init__(self, uri)
 
     @property
     def graph_db(self):
         return GraphDatabaseService.get_instance(self.__metadata__["data"])
 
 
-class GraphDatabaseService(CacheableNeoResource):
+class GraphDatabaseService(Cacheable, Resource):
 
     def __init__(self, uri=None):
         if uri is None:
-            CacheableNeoResource.__init__(self, ServiceRoot().graph_db.__uri__)
+            Resource.__init__(self, ServiceRoot().graph_db.__uri__)
         else:
-            CacheableNeoResource.__init__(self, uri)
+            Resource.__init__(self, uri)
+
+    @property
+    def write_batch(self):
+        return WriteBatch(self.__metadata__["batch"])
 
     @property
     def cypher(self):
@@ -114,8 +104,53 @@ class GraphDatabaseService(CacheableNeoResource):
     def neo4j_version(self):
         return self.__metadata__["neo4j_version"]
 
+    @property
+    def node(self):
+        return NodeResource(self.__metadata__["node"])
 
-class Cypher(CacheableNeoResource):
+
+class _Batch(Resource):
+
+    def __init__(self, uri):
+        Resource.__init__(self, uri)
+        #if not isinstance(graph_db, GraphDatabaseService):
+        #    raise TypeError(graph_db)
+        #self._graph_db...
+        #self._create_node_uri = rest.URI(self._graph_db.__metadata__["node"]).reference
+        #self._cypher_uri = rest.URI(self._graph_db._cypher_uri).reference
+        self.clear()
+
+    def __len__(self):
+        return len(self.requests)
+
+    def __nonzero__(self):
+        return bool(self.requests)
+
+    def append(self, request):
+        self.requests.append(request)
+
+    def clear(self):
+        """ Clear all requests from this batch.
+        """
+        self.requests = []
+
+
+class WriteBatch(_Batch):
+
+    def create_node(self):
+        return self.service_root.graph_db
+
+
+class NodeResource(Cacheable, Resource):
+
+    def get(self, id_):
+        return self._subresource(id_)._get()
+
+    def create(self):
+        return self._post()
+
+
+class Cypher(Cacheable, Resource):
 
     class Value(object):
 
