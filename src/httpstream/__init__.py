@@ -16,5 +16,5 @@
 # limitations under the License.
 
 
-from .http import Resource
+from .http import Request, Response, Resource
 from .uri import URI

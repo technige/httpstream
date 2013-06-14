@@ -303,14 +303,17 @@ class Resource(object):
     def __uri__(self):
         return URI(redirects.get(self._uri, self._uri))
 
+    def request(self, method, body=None, headers=None):
+        return Request(method, self.__uri__, body, headers)
+
     def get(self, headers=None, **kwargs):
-        return Request("GET", self.__uri__, headers).submit(**kwargs)
+        return self.request("GET", None, headers).submit(**kwargs)
 
     def put(self, body, headers=None, **kwargs):
-        return Request("PUT", self.__uri__, body, headers).submit(**kwargs)
+        return self.request("PUT", body, headers).submit(**kwargs)
 
     def post(self, body, headers=None, **kwargs):
-        return Request("POST", self.__uri__, body, headers).submit(**kwargs)
+        return self.request("POST", body, headers).submit(**kwargs)
 
     def delete(self, headers=None, **kwargs):
-        return Request("DELETE", self.__uri__, headers).submit(**kwargs)
+        return self.request("DELETE", None, headers).submit(**kwargs)

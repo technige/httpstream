@@ -25,6 +25,24 @@ class NeoResource(object):
         def __iter__(self):
             return iter(self._metadata.items())
 
+    class Request(object):
+
+        def __init__(self, request):
+            self.request = request
+
+        def __repr__(self):
+            return repr(self.for_batch())
+
+        def for_batch(self, **params):
+            obj = {
+                "method": str(self.request.method),
+                "to": self.request.uri.reference,
+            }
+            if self.request.body:
+                obj["body"] = self.request.body
+            obj.update(**params)
+            return obj
+
     def __init__(self, uri):
         self._resource = Resource(uri)
         self._metadata = None
@@ -47,6 +65,10 @@ class NeoResource(object):
         """ Refresh resource metadata.
         """
         self._metadata = NeoResource.Metadata(self._resource)
+
+    def request(self, method, body=None, headers=None):
+        return NeoResource.Request(self._resource.request(method, body,
+                                                          headers))
 
 
 class CacheableNeoResource(NeoResource):
