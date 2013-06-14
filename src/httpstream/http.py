@@ -125,10 +125,10 @@ class Request(object):
 
     def __init__(self, method, uri, body=None, headers=None):
         self.method = method
-        self._uri = uri
-        self._body = body
+        self.uri = uri
         self._headers = dict(headers or {})
         self._headers.setdefault("Host", self.uri.netloc)
+        self.body = body
 
     @property
     def __uri__(self):

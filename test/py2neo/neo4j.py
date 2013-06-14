@@ -1,6 +1,7 @@
 
 
 from httpstream import Resource as _Resource, URI
+from jsonstream import merged
 
 from .mixins import Cacheable
 
@@ -144,58 +145,39 @@ class WriteBatch(_Batch):
 class NodeResource(Cacheable, Resource):
 
     def get(self, id_):
-        return self._subresource(id_)._get()
+        obj = None
+        for key, value in self._subresource(id_)._get():
+            obj = merged(obj, key, value)
+        return obj
 
     def create(self):
-        return self._post()
+        obj = None
+        for key, value in self._post():
+            obj = merged(obj, key, value)
+        return obj
 
 
 class Cypher(Cacheable, Resource):
 
-    class Value(object):
-
-        def __init__(self):
-            self._value = None
-
-        def __repr__(self):
-            return repr(self._value)
-
-        def put(self, key, value):
-            self._value = value
-
-    class Values(object):
-
-        def __init__(self):
-            self._values = []
-
-        def __repr__(self):
-            return repr(self._values)
-
-        def put(self, column, key, value):
-            while len(self._values) <= column:
-                self._values.append(Cypher.Value())
-            self._values[column].put(key, value)
-
-    def execute(self, query):
-        response = self._resource.post({"query": query})
-        columns = Cypher.Values()
-        row, values = None, Cypher.Values()
-        for key, value in response:
+    def execute(self, query, **params):
+        columns = None
+        values = None
+        row = None
+        for key, value in self._post({"query": query, "params": params}):
             section = key[0]
             if section == "columns":
-                columns.put(key[1], None, value)
+                columns = merged(columns, key[1:], value)
             elif section == "data":
                 if columns:
                     yield columns
                     columns = None
-                if key[1] != row:
-                    if row is not None:
+                if row != key[1]:
+                    if values is not None:
                         yield values
-                        values = Cypher.Values()
+                        values = None
                     row = key[1]
-                print(key, value)
-                values.put(key[2], key[3:], value)
-        if row is not None:
+                values = merged(values, key[2:], value)
+        if values is not None:
             yield values
 
 
