@@ -7,6 +7,16 @@ except ImportError:
 
 class URI(object):
 
+    @classmethod
+    def join(cls, *parts):
+        parts = list(parts)
+        for i, part in enumerate(parts):
+            if i > 0:
+                parts[i] = str(parts[i]).lstrip("/")
+            if i < len(parts) - 1:
+                parts[i] = str(parts[i]).rstrip("/")
+        return "/".join(parts)
+
     def __init__(self, uri):
         try:
             self.__uri__ = str(uri.__uri__)
