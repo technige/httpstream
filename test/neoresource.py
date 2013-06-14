@@ -3,30 +3,6 @@
 from httpstream import Resource
 
 
-class Metadata(object):
-
-    def __init__(self, resource):
-        self._resource = resource
-        self._metadata = None
-
-    @property
-    def resource(self):
-        return self._resource
-
-    def refresh(self):
-        self._metadata = dict(self._resource.get())
-
-    def __getitem__(self, key):
-        if not self._metadata:
-            self.refresh()
-        if not isinstance(key, tuple):
-            key = (key,)
-        return self._metadata.get(key)
-
-    def __iter__(self):
-        return iter(self._metadata)
-
-
 DEFAULT_SCHEME = "http"
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 7474
@@ -36,17 +12,41 @@ class NeoResource(object):
     """ Basic RESTful web resource with JSON metadata.
     """
 
+    class Metadata(object):
+
+        def __init__(self, resource):
+            self._metadata = dict(resource.get())
+
+        def __getitem__(self, key):
+            if not isinstance(key, tuple):
+                key = (key,)
+            return self._metadata.get(key)
+
+        def __iter__(self):
+            return iter(self._metadata.items())
+
     def __init__(self, uri):
         self._resource = Resource(uri)
-        self.__metadata__ = Metadata(self._resource)
+        self._metadata = None
 
     @property
     def __uri__(self):
         return self._resource.__uri__
 
     @property
+    def __metadata__(self):
+        if not self._metadata:
+            self.refresh()
+        return self._metadata
+
+    @property
     def service_root(self):
-        return ServiceRoot.get_instance(self._resource.__uri__.root)
+        return ServiceRoot.get_instance(self._resource.__uri__.base)
+
+    def refresh(self):
+        """ Refresh resource metadata.
+        """
+        self._metadata = NeoResource.Metadata(self._resource)
 
 
 class CacheableNeoResource(NeoResource):
@@ -68,7 +68,7 @@ class ServiceRoot(CacheableNeoResource):
 
     def __init__(self, uri=None):
         if uri is None:
-            uri = "http://localhost:7474/"
+            uri = "http://localhost:7474"
         CacheableNeoResource.__init__(self, uri)
 
     @property

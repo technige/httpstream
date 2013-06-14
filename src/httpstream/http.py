@@ -25,44 +25,43 @@ from threading import local
 
 from jsonstream import JSONStream
 
+from .exceptions import TooManyRedirects
 from .uri import URI
 
 
-DEFAULT_CHARSET = "ISO-8859-1"
-DEFAULT_CHUNK_SIZE = 4096
-HTTP_CLASSES = {
-    "http": HTTPConnection,
-    "https": HTTPSConnection,
-}
+default_charset = "ISO-8859-1"
+default_chunk_size = 4096
+redirects = {}
 
 
 class ConnectionPuddle(local):
 
-    def __init__(self, scheme, hostname, port):
+    _http_classes = {
+        "http": HTTPConnection,
+        "https": HTTPSConnection,
+    }
+
+    def __init__(self, scheme, netloc):
         local.__init__(self)
-        self._hostname = hostname
-        self._port = port
         self._scheme = scheme
+        self._netloc = netloc
         self._active = []
         self._passive = []
 
     @property
-    def hostname(self):
-        return self._hostname
-
-    @property
-    def port(self):
-        return self._port
+    def netloc(self):
+        return self._netloc
 
     @property
     def scheme(self):
         return self._scheme
 
     def __repr__(self):
-        return "({0}://{1}:{2} active={3} passive={4})".format(self.scheme, self.hostname, self.port, len(self._active), len(self._passive))
+        return "({0}://{1} active={2} passive={3})".format(
+            self.scheme, self.netloc, len(self._active), len(self._passive))
 
     def __hash__(self):
-        return hash((self.scheme, self.hostname, self.port))
+        return hash((self.scheme, self.netloc))
 
     def __len__(self):
         return len(self._active) + len(self._passive)
@@ -71,7 +70,7 @@ class ConnectionPuddle(local):
         if self._passive:
             connection = self._passive.pop()
         else:
-            connection = HTTP_CLASSES[self.scheme](self.hostname, self.port)
+            connection = self._http_classes[self.scheme](self.netloc)
         self._active.append(connection)
         return connection
 
@@ -91,15 +90,22 @@ class ConnectionPool(object):
     _puddles = {}
 
     @classmethod
-    def _get_puddle(cls, scheme, hostname, port):
-        key = (scheme, hostname, port)
+    def _get_puddle(cls, scheme, netloc):
+        if ":" in netloc:
+            key = (scheme, netloc)
+        elif scheme == "https":
+            key = (scheme, netloc + ":443")
+        elif scheme == "http":
+            key = (scheme, netloc + ":80")
+        else:
+            raise ValueError("Unknown scheme " + repr(scheme))
         if key not in cls._puddles:
-            cls._puddles[key] = ConnectionPuddle(scheme, hostname, port)
+            cls._puddles[key] = ConnectionPuddle(scheme, netloc)
         return cls._puddles[key]
 
     @classmethod
-    def acquire(cls, scheme, hostname, port):
-        puddle = cls._get_puddle(scheme, hostname, port)
+    def acquire(cls, scheme, netloc):
+        puddle = cls._get_puddle(scheme, netloc)
         return puddle.acquire()
 
     @classmethod
@@ -110,46 +116,94 @@ class ConnectionPool(object):
             schema = "http"
         else:
             raise TypeError("Unknown connection type " + repr(connection.__class__))
-        puddle = cls._get_puddle(schema, connection.host, connection.port)
+        puddle = cls._get_puddle(schema, "{0}:{1}".format(
+            connection.host, connection.port))
         puddle.release(connection)
+
+
+class Request(object):
+
+    def __init__(self, method, uri, body=None, headers=None):
+        self.method = method
+        self._uri = uri
+        self._body = body
+        self._headers = dict(headers or {})
+        self._headers.setdefault("Host", self.uri.netloc)
+
+    @property
+    def __uri__(self):
+        return self.uri
+
+    @property
+    def uri(self):
+        return self._uri
+
+    @uri.setter
+    def uri(self, value):
+        self._uri = URI(value)
+
+    @property
+    def body(self):
+        return self._body
+
+    @body.setter
+    def body(self, value):
+        if isinstance(value, dict):
+            self._body = json.dumps(value, separators=(",", ":"))
+            self._headers.setdefault("Content-Type", "application/json")
+        else:
+            self._body = value
+
+    @property
+    def headers(self):
+        return self._headers
+
+    def _submit(self, method, uri, body, headers):
+        uri = URI(uri)
+        try:
+            http = ConnectionPool.acquire(uri.scheme, uri.netloc)
+        except KeyError:
+            raise ValueError("Unsupported URI scheme {0}".format(
+                repr(uri.scheme)))
+        try:
+            http.request(method, uri.reference, body, headers)
+            response = http.getresponse()
+        except BadStatusLine as err:
+            if err.line == repr(""):
+                http.close()
+                http.connect()
+                http.request(method, uri.reference, body, headers)
+                response = http.getresponse()
+            else:
+                raise err
+        return http, response
+
+    def submit(self, **kwargs):
+        follow = kwargs.get("follow", 5)
+        uri = self.uri
+        while uri:
+            http, rs = self._submit(self.method, uri, self.body, self.headers)
+            if rs.status // 100 == 3:
+                if follow:
+                    location = rs.getheader("Location")
+                    if rs.status in (301, 308):
+                        # Moved Permanently, Permanent Redirect
+                        redirects[uri] = location
+                    uri = location
+                    follow -= 1
+                else:
+                    uri = None
+            else:
+                return Response(http, self, rs, **kwargs)
+        raise TooManyRedirects()
 
 
 class Response(object):
 
-    def __init__(self, method, uri, body=None, headers=None, **kwargs):
-        # TODO: tidy this up a bit!
-        self._method = method
-        self.__uri__ = URI(uri)
-        self._headers = headers or {}
-        scheme, host, port = self.__uri__.scheme, self.__uri__.hostname, self.__uri__.port
-        if isinstance(body, dict):
-            self._body = json.dumps(body, separators=(",", ":"))
-            self._headers.setdefault("Content-Type", "application/json")
-            self._headers.setdefault("Host", host)
-        else:
-            self._body = body
-        if not port:
-            port = 443 if scheme == "https" else 80
-        try:
-            self._http = ConnectionPool.acquire(scheme, host, port)
-        except KeyError:
-            raise ValueError("Unsupported URI scheme {0}".format(
-                repr(self.__uri__.scheme)))
-        if self.__uri__.query:
-            path = self.__uri__.path + "?" + self.__uri__.query
-        else:
-            path = self.__uri__.path
-        try:
-            self._http.request(method, path, self._body, headers or {})
-            self._response = self._http.getresponse()
-        except BadStatusLine as err:
-            if err.line == repr(""):
-                self._http.close()
-                self._http.connect()
-                self._http.request(method, path, self._body, headers or {})
-                self._response = self._http.getresponse()
-            else:
-                raise err
+    def __init__(self, http, request, response, **kwargs):
+        self._http = http
+        self._request = request
+        self._response = response
         self._kwargs = kwargs
 
     def __del__(self):
@@ -176,8 +230,8 @@ class Response(object):
             self._http = None
 
     @property
-    def uri(self):
-        return self.__uri__
+    def request(self):
+        return self._request
 
     @property
     def status_code(self):
@@ -210,8 +264,8 @@ class Response(object):
                 for _ in self["Content-Type"].split(";")
             )
         except AttributeError:
-            return DEFAULT_CHARSET
-        return content_type.get("charset", DEFAULT_CHARSET)
+            return default_charset
+        return content_type.get("charset", default_charset)
 
     def __iter__(self):
         def response_iterator(chunk_size):
@@ -240,14 +294,6 @@ class Response(object):
             return iterator
 
 
-redirects = {}
-
-
-class TooManyRedirects(HTTPException):
-
-    pass
-
-
 class Resource(object):
 
     def __init__(self, uri):
@@ -257,33 +303,14 @@ class Resource(object):
     def __uri__(self):
         return URI(redirects.get(self._uri, self._uri))
 
-    def request(self, method, body=None, headers=None, **kwargs):
-        follow = kwargs.get("follow", 5)
-        uri = self.__uri__
-        while uri:
-            rs = Response(method, uri, body, headers, **kwargs)
-            if rs.status_code // 100 == 3:
-                if follow:
-                    other_uri = rs["Location"]
-                    if rs.status_code in (301, 308):
-                        # Moved Permanently, Permanent Redirect
-                        redirects[uri] = other_uri
-                    uri = other_uri
-                    follow -= 1
-                else:
-                    uri = None
-            else:
-                return rs
-        raise TooManyRedirects()
-
     def get(self, headers=None, **kwargs):
-        return self.request("GET", headers=headers, **kwargs)
+        return Request("GET", self.__uri__, headers).submit(**kwargs)
 
     def put(self, body, headers=None, **kwargs):
-        return self.request("PUT", body=body, headers=headers, **kwargs)
+        return Request("PUT", self.__uri__, body, headers).submit(**kwargs)
 
     def post(self, body, headers=None, **kwargs):
-        return self.request("POST", body=body, headers=headers, **kwargs)
+        return Request("POST", self.__uri__, body, headers).submit(**kwargs)
 
     def delete(self, headers=None, **kwargs):
-        return self.request("DELETE", headers=headers, **kwargs)
+        return Request("DELETE", self.__uri__, headers).submit(**kwargs)

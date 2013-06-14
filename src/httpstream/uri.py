@@ -40,5 +40,16 @@ class URI(object):
         return URI(self).__uri__ != URI(other).__uri__
 
     @property
-    def root(self):
-        return "{0}://{1}/".format(self.scheme, self.netloc)
+    def base(self):
+        return "{0}://{1}".format(self.scheme, self.netloc)
+
+    @property
+    def reference(self):
+        ref = [self.path]
+        if self.query:
+            ref.append("?")
+            ref.append(self.query)
+        if self.fragment:
+            ref.append("#")
+            ref.append(self.fragment)
+        return "".join(ref)
