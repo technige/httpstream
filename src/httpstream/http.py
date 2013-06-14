@@ -148,7 +148,15 @@ class Response(object):
                 self._http.connect()
                 self._http.request(method, path, self._body, headers or {})
                 self._response = self._http.getresponse()
+            else:
+                raise err
         self._kwargs = kwargs
+
+    def __del__(self):
+        self._release()
+
+    def __repr__(self):
+        return "{0} {1}".format(self.status_code, self.reason)
 
     def __getitem__(self, key):
         if not self._response:
@@ -157,6 +165,15 @@ class Response(object):
 
     def _decode(self, data):
         return data.decode(self.charset)
+
+    def _release(self):
+        if self._http:
+            try:
+                self._response.read()
+            except HTTPException:
+                pass
+            ConnectionPool.release(self._http)
+            self._http = None
 
     @property
     def uri(self):
@@ -215,9 +232,7 @@ class Response(object):
                             pending.append(data)
             else:
                 yield self._decode(self._response.read())
-            if self._http:
-                ConnectionPool.release(self._http)
-                self._http = None
+            self._release()
         iterator = response_iterator(self._kwargs.get("chunk_size"))
         if self.content_type in ("application/json", "application/x-javascript"):
             return iter(JSONStream(iterator))
@@ -225,19 +240,50 @@ class Response(object):
             return iterator
 
 
+redirects = {}
+
+
+class TooManyRedirects(HTTPException):
+
+    pass
+
+
 class Resource(object):
 
     def __init__(self, uri):
-        self.__uri__ = URI(uri)
+        self._uri = uri
+
+    @property
+    def __uri__(self):
+        return URI(redirects.get(self._uri, self._uri))
+
+    def request(self, method, body=None, headers=None, **kwargs):
+        follow = kwargs.get("follow", 5)
+        uri = self.__uri__
+        while uri:
+            rs = Response(method, uri, body, headers, **kwargs)
+            if rs.status_code // 100 == 3:
+                if follow:
+                    other_uri = rs["Location"]
+                    if rs.status_code in (301, 308):
+                        # Moved Permanently, Permanent Redirect
+                        redirects[uri] = other_uri
+                    uri = other_uri
+                    follow -= 1
+                else:
+                    uri = None
+            else:
+                return rs
+        raise TooManyRedirects()
 
     def get(self, headers=None, **kwargs):
-        return Response("GET", self.__uri__, headers, **kwargs)
+        return self.request("GET", headers=headers, **kwargs)
 
     def put(self, body, headers=None, **kwargs):
-        return Response("PUT", self.__uri__, body, headers, **kwargs)
+        return self.request("PUT", body=body, headers=headers, **kwargs)
 
     def post(self, body, headers=None, **kwargs):
-        return Response("POST", self.__uri__, body, headers, **kwargs)
+        return self.request("POST", body=body, headers=headers, **kwargs)
 
     def delete(self, headers=None, **kwargs):
-        return Response("DELETE", self.__uri__, headers, **kwargs)
+        return self.request("DELETE", headers=headers, **kwargs)

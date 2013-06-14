@@ -38,3 +38,7 @@ class URI(object):
 
     def __ne__(self, other):
         return URI(self).__uri__ != URI(other).__uri__
+
+    @property
+    def root(self):
+        return "{0}://{1}/".format(self.scheme, self.netloc)
