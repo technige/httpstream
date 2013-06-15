@@ -9,6 +9,8 @@ from .mixins import Cacheable
 DEFAULT_SCHEME = "http"
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 7474
+DEFAULT_NETLOC = "{1}:{2}".format(DEFAULT_HOST, DEFAULT_PORT)
+DEFAULT_URI = "{0}://{1}".format(DEFAULT_SCHEME, DEFAULT_NETLOC)
 
 
 class Resource(object):
@@ -76,9 +78,7 @@ class ServiceRoot(Cacheable, Resource):
     """
 
     def __init__(self, uri=None):
-        if uri is None:
-            uri = "http://localhost:7474"
-        Resource.__init__(self, uri)
+        Resource.__init__(self, uri or DEFAULT_URI)
 
     @property
     def graph_db(self):
