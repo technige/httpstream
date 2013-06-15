@@ -1,7 +1,7 @@
 
 
 from httpstream import Resource as _Resource, URI
-from jsonstream import assembled, merged
+from jsonstream import assembled
 
 from .mixins import Cacheable
 
@@ -173,10 +173,3 @@ class Cypher(Cacheable, Resource):
                 values.append((key[2:], value))
         if values is not None:
             yield assembled(values)
-
-
-if __name__ == "__main__":
-    graph_db = GraphDatabaseService("http://localhost:7474/db/data/")
-    print(graph_db.neo4j_version)
-    for foo in graph_db.cypher.execute("START n=node(1000,1001) RETURN id(n),n"):
-        print(foo)
