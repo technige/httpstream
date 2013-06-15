@@ -19,6 +19,18 @@
 """
 
 
+def assembled(iterable):
+    """ Assembles a JSON-derived value from a set of key-value pairs as
+    produced by the JSONStream process in a similar way to the built-in `dict`
+    function. Uses the `merged` function on each pair to build the return
+    value.
+    """
+    obj = None
+    for key, value in iterable:
+        obj = merged(obj, key, value)
+    return obj
+
+
 def merged(obj, key, value):
     """ Merge value with object supplied at a position described by iterable
     key. The key describes a navigable path through the object hierarchy with
@@ -55,4 +67,3 @@ def merged(obj, key, value):
         return obj
     else:
         return value
-

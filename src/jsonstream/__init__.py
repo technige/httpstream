@@ -21,7 +21,7 @@
 
 from .exceptions import AwaitingData, EndOfStream, UnexpectedCharacter
 from .tokeniser import Tokeniser
-from .util import merged
+from .util import assembled, merged
 
 
 # Token constants used for expectation management

@@ -1,7 +1,7 @@
 
 
 from httpstream import Resource as _Resource, URI
-from jsonstream import merged
+from jsonstream import assembled, merged
 
 from .mixins import Cacheable
 
@@ -145,40 +145,34 @@ class WriteBatch(_Batch):
 class NodeResource(Cacheable, Resource):
 
     def get(self, id_):
-        obj = None
-        for key, value in self._subresource(id_)._get():
-            obj = merged(obj, key, value)
-        return obj
+        return assembled(self._subresource(id_)._get())
 
     def create(self):
-        obj = None
-        for key, value in self._post():
-            obj = merged(obj, key, value)
-        return obj
+        return assembled(self._post())
 
 
 class Cypher(Cacheable, Resource):
 
     def execute(self, query, **params):
-        columns = None
-        values = None
+        columns = []
+        values = []
         row = None
         for key, value in self._post({"query": query, "params": params}):
             section = key[0]
             if section == "columns":
-                columns = merged(columns, key[1:], value)
+                columns.append((key[1:], value))
             elif section == "data":
-                if columns:
-                    yield columns
+                if columns is not None:
+                    yield assembled(columns)
                     columns = None
                 if row != key[1]:
-                    if values is not None:
-                        yield values
-                        values = None
+                    if row is not None:
+                        yield assembled(values)
+                        values = []
                     row = key[1]
-                values = merged(values, key[2:], value)
+                values.append((key[2:], value))
         if values is not None:
-            yield values
+            yield assembled(values)
 
 
 if __name__ == "__main__":
