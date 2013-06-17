@@ -21,9 +21,12 @@
 
 from string import whitespace
 try:
-    from io import StringIO
+    try:
+        from cStringIO import StringIO
+    except ImportError:
+        from StringIO import StringIO
 except ImportError:
-    from StringIO import StringIO
+    from io import StringIO
 
 from .exceptions import AwaitingData, EndOfStream, UnexpectedCharacter
 

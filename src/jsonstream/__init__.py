@@ -162,4 +162,3 @@ class JSONStream(object):
                         break
             except EndOfStream:
                 break
-

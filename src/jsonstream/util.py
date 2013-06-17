@@ -19,20 +19,32 @@
 """
 
 
-def assembled(iterable):
-    """ Assembles a JSON-derived value from a set of key-value pairs as
-    produced by the JSONStream process in a similar way to the built-in `dict`
-    function. Uses the `merged` function on each pair to build the return
-    value.
+def assembled(iterable, key_offset=0):
+    """ Returns a JSON-derived value from a set of key-value pairs as produced
+    by the JSONStream process. This operates in a similar way to the built-in
+    `dict` function. Internally, this uses the `merged` function on each pair
+    to build the return value.
+
+        >>> data = [
+        ...     (("drink",), "lemonade"),
+        ...     (("cutlery", 0), "knife"),
+        ...     (("cutlery", 1), "fork"),
+        ...     (("cutlery", 2), "spoon"),
+        ... ]
+        >>> assembled(data)
+        {'cutlery': ['knife', 'fork', 'spoon'], 'drink': 'lemonade'}
+
+    :param iterable: key-value pairs to be merged into assembled value
+    :param key_offset: base offset of key tuple to be used for assembly
     """
     obj = None
     for key, value in iterable:
-        obj = merged(obj, key, value)
+        obj = merged(obj, key[key_offset:], value)
     return obj
 
 
 def merged(obj, key, value):
-    """ Merge value with object supplied at a position described by iterable
+    """ Returns object with value merged at a position described by iterable
     key. The key describes a navigable path through the object hierarchy with
     integer items describing list indexes and other types of items describing
     dictionary keys.
