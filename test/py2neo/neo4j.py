@@ -1,4 +1,5 @@
 
+from itertools import groupby
 
 from httpstream import Resource as _Resource, URI
 from jsonstream import assembled
@@ -9,7 +10,7 @@ from .mixins import Cacheable
 DEFAULT_SCHEME = "http"
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 7474
-DEFAULT_NETLOC = "{1}:{2}".format(DEFAULT_HOST, DEFAULT_PORT)
+DEFAULT_NETLOC = "{0}:{1}".format(DEFAULT_HOST, DEFAULT_PORT)
 DEFAULT_URI = "{0}://{1}".format(DEFAULT_SCHEME, DEFAULT_NETLOC)
 
 
@@ -153,23 +154,15 @@ class NodeResource(Cacheable, Resource):
 
 class Cypher(Cacheable, Resource):
 
+    @staticmethod
+    def _row_id(result):
+        key, value = result
+        if key[0] == "columns":
+            return key[0:1]
+        else:
+            return key[0:2]
+
     def execute(self, query, **params):
-        columns = []
-        values = []
-        row = None
-        for key, value in self._post({"query": query, "params": params}):
-            section = key[0]
-            if section == "columns":
-                columns.append((key[1:], value))
-            elif section == "data":
-                if columns is not None:
-                    yield assembled(columns)
-                    columns = None
-                if row != key[1]:
-                    if row is not None:
-                        yield assembled(values)
-                        values = []
-                    row = key[1]
-                values.append((key[2:], value))
-        if values is not None:
-            yield assembled(values)
+        results = self._post({"query": query, "params": params})
+        for row_id, result in groupby(results, self._row_id):
+            yield assembled(result, key_offset=len(row_id))
