@@ -154,15 +154,40 @@ class NodeResource(Cacheable, Resource):
 
 class Cypher(Cacheable, Resource):
 
-    @staticmethod
-    def _row_id(result):
-        key, value = result
-        if key[0] == "columns":
-            return key[0:1]
-        else:
-            return key[0:2]
+    class Query(object):
+
+        def __init__(self, cypher, query):
+            self._cypher = cypher
+            self._query = query
+
+        def execute(self, **params):
+            return Cypher.ResultSet(self._cypher._post({
+                "query": self._query,
+                "params": params,
+            }))
+
+    class ResultSet(object):
+
+        @staticmethod
+        def _row_id(result):
+            key, value = result
+            if key[0] == "columns":
+                return key[0:1]
+            else:
+                return key[0:2]
+
+        def __init__(self, results):
+            self._results = results
+
+        def __iter__(self):
+            for row_id, result in groupby(self._results, self._row_id):
+                if row_id[0] == "columns":
+                    pass
+                else:
+                    yield assembled(result, key_offset=2)
+
+    def query(self, query):
+        return Cypher.Query(self, query)
 
     def execute(self, query, **params):
-        results = self._post({"query": query, "params": params})
-        for row_id, result in groupby(results, self._row_id):
-            yield assembled(result, key_offset=len(row_id))
+        return Cypher.Query(self, query).execute(**params)
