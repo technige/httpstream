@@ -1,7 +1,8 @@
 
 try:
-    from urllib.parse import urlparse
+    from urllib.parse import quote, urlparse
 except ImportError:
+    from urllib import quote
     from urlparse import urlparse
 
 
@@ -9,12 +10,12 @@ class URI(object):
 
     @classmethod
     def join(cls, *parts):
-        parts = list(parts)
+        parts = list(str(part) for part in parts)
         for i, part in enumerate(parts):
-            if i > 0:
-                parts[i] = str(parts[i]).lstrip("/")
             if i < len(parts) - 1:
-                parts[i] = str(parts[i]).rstrip("/")
+                parts[i] = parts[i].rstrip("/")
+            if i > 0:
+                parts[i] = quote(parts[i].lstrip("/"))
         return "/".join(parts)
 
     def __init__(self, uri):
@@ -38,16 +39,19 @@ class URI(object):
         return hash(self.__uri__)
 
     def __repr__(self):
-        return "<{0}>".format(self.__uri__)
+        return repr(self.__uri__)
 
     def __str__(self):
-        return self.__uri__
+        return str(self.__uri__)
 
     def __eq__(self, other):
         return URI(self).__uri__ == URI(other).__uri__
 
     def __ne__(self, other):
         return URI(self).__uri__ != URI(other).__uri__
+
+    def __len__(self):
+        return len(str(self.__uri__))
 
     @property
     def base(self):

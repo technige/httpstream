@@ -124,6 +124,8 @@ class ConnectionPool(object):
 class Request(object):
 
     def __init__(self, method, uri, body=None, headers=None):
+        if not uri:
+            raise ValueError("No URI specified for request")
         self.method = method
         self.uri = uri
         self._headers = dict(headers or {})
@@ -144,18 +146,19 @@ class Request(object):
 
     @property
     def body(self):
-        return self._body
+        if isinstance(self._body, (dict, list, tuple)):
+            return json.dumps(self._body, separators=(",", ":"))
+        else:
+            return self._body
 
     @body.setter
     def body(self, value):
-        if isinstance(value, dict):
-            self._body = json.dumps(value, separators=(",", ":"))
-            self._headers.setdefault("Content-Type", "application/json")
-        else:
-            self._body = value
+        self._body = value
 
     @property
     def headers(self):
+        if isinstance(self._body, (dict, list, tuple)):
+            self._headers.setdefault("Content-Type", "application/json")
         return self._headers
 
     def _submit(self, method, uri, body, headers):
@@ -239,7 +242,7 @@ class Response(object):
 
     @property
     def reason(self):
-        return responses[self._response.status]
+        return responses[self.status_code]
 
     @property
     def headers(self):
@@ -288,7 +291,10 @@ class Response(object):
                 yield self._decode(self._response.read())
             self._release()
         iterator = response_iterator(self._kwargs.get("chunk_size"))
-        if self.content_type in ("application/json", "application/x-javascript"):
+        if self.status_code == 204:
+            return iter([])
+        elif self.content_type in ("application/json",
+                                   "application/x-javascript"):
             return iter(JSONStream(iterator))
         else:
             return iterator
@@ -297,11 +303,32 @@ class Response(object):
 class Resource(object):
 
     def __init__(self, uri):
-        self._uri = str(uri)
+        if uri:
+            self._uri = str(uri)
+        else:
+            self._uri = None
+
+    def __repr__(self):
+        """ Return a valid Python representation of this object.
+        """
+        return "{0}({1})".format(self.__class__.__name__, repr(self.__uri__))
+
+    def __eq__(self, other):
+        """ Determine equality of two objects based on URI.
+        """
+        return self.__uri__ == other.__uri__
+
+    def __ne__(self, other):
+        """ Determine inequality of two objects based on URI.
+        """
+        return self.__uri__ != other.__uri__
 
     @property
     def __uri__(self):
-        return URI(redirects.get(self._uri, self._uri))
+        if self._uri:
+            return URI(redirects.get(self._uri, self._uri))
+        else:
+            return None
 
     def request(self, method, body=None, headers=None):
         return Request(method, self.__uri__, body, headers)

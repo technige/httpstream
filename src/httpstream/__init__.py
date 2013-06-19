@@ -16,5 +16,6 @@
 # limitations under the License.
 
 
+from .exceptions import *
 from .http import Request, Response, Resource
 from .uri import URI
