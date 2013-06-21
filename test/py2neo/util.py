@@ -1,4 +1,7 @@
 
+import re
+
+
 try:
     from urllib.parse import quote as _quote
 except ImportError:
@@ -49,3 +52,20 @@ def quote(string, safe='/'):
         return _quote(string, safe.encode("utf-8"))
     except UnicodeEncodeError:
         return string
+
+VERSION = re.compile("(\d+\.\d+(\.\d+)?)")
+
+def version_tuple(string):
+    numbers = VERSION.match(string)
+    if numbers:
+        version = [int(n) for n in numbers.group(0).split(".")]
+        extra = string[len(numbers.group(0)):]
+        while extra.startswith(".") or extra.startswith("-"):
+            extra = extra[1:]
+    else:
+        version = []
+        extra = string
+    while len(version) < 3:
+        version += [0]
+    version += [extra]
+    return tuple(version)

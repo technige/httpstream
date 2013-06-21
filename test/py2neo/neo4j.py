@@ -12,7 +12,7 @@ from httpstream import (
 from jsonstream import assembled
 
 from .mixins import Cacheable
-from .util import compact, flatten, has_all, is_collection, quote
+from .util import compact, flatten, has_all, is_collection, quote, version_tuple
 
 
 DEFAULT_SCHEME = "http"
@@ -125,8 +125,12 @@ class Resource(object):
 
     class Metadata(object):
 
-        def __init__(self, resource):
-            self._metadata = assembled(resource.get())
+        @classmethod
+        def load(cls, resource):
+            return cls(assembled(resource.get()))
+
+        def __init__(self, metadata):
+            self._metadata = dict(metadata)
 
         def __getitem__(self, key):
             return self._metadata[key]
@@ -135,7 +139,11 @@ class Resource(object):
             return iter(self._metadata.items())
 
     def __init__(self, uri):
-        self._resource = _Resource(uri)
+        self._resource = _Resource(uri, headers={
+            # TODO: proper user agent
+            "User-Agent": "py2neo/1.6.alpha (linux; python/2.7.3)",
+            "X-Stream": "true;format=pretty",
+        })
         self._metadata = None
         self._subresources = {}
         self.__cypher = None
@@ -197,29 +205,18 @@ class Resource(object):
         """ Refresh resource metadata.
         """
         if not self.is_abstract:
-            self._metadata = Resource.Metadata(self._resource)
-
-    def _request(self, method, body=None, headers=None):
-        return self._resource.request(method, body, headers)
+            self._metadata = Resource.Metadata.load(self._resource)
 
     def _get(self, headers=None):
-        headers = headers or {}
-        headers.setdefault("X-Stream", "true;format=pretty")
         return self._resource.get(headers)
 
     def _put(self, body=None, headers=None):
-        headers = headers or {}
-        headers.setdefault("X-Stream", "true;format=pretty")
         return self._resource.put(body, headers)
 
     def _post(self, body=None, headers=None):
-        headers = headers or {}
-        headers.setdefault("X-Stream", "true;format=pretty")
         return self._resource.post(body, headers)
 
     def _delete(self, headers=None):
-        headers = headers or {}
-        headers.setdefault("X-Stream", "true;format=pretty")
         return self._resource.delete(headers)
 
     def _subresource(self, key, cls=None):
@@ -963,7 +960,10 @@ class Node(_Entity):
 
     @classmethod
     def _hydrated(cls, data):
-        return "NODE"
+        obj = cls(data["self"])
+        obj._metadata = Resource.Metadata(data)
+        obj._properties = data.get("data", {})
+        return obj
 
     @classmethod
     def abstract(cls, *labels, **properties):
@@ -1225,7 +1225,10 @@ class Relationship(_Entity):
 
     @classmethod
     def _hydrated(cls, data):
-        return "REL"
+        obj = cls(data["self"])
+        obj._metadata = Resource.Metadata(data)
+        obj._properties = data.get("data", {})
+        return obj
 
     @classmethod
     def abstract(cls, start_node, type, end_node, **properties):

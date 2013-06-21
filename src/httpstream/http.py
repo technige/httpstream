@@ -302,11 +302,15 @@ class Response(object):
 
 class Resource(object):
 
-    def __init__(self, uri):
+    def __init__(self, uri, headers=None):
         if uri:
             self._uri = str(uri)
         else:
             self._uri = None
+        if headers:
+            self._headers = dict(headers)
+        else:
+            self._headers = {}
 
     def __repr__(self):
         """ Return a valid Python representation of this object.
@@ -331,7 +335,10 @@ class Resource(object):
             return None
 
     def request(self, method, body=None, headers=None):
-        return Request(method, self.__uri__, body, headers)
+        request_headers = dict(self._headers)
+        if headers:
+            request_headers.update(headers)
+        return Request(method, self.__uri__, body, request_headers)
 
     def get(self, headers=None, **kwargs):
         return self.request("GET", None, headers).submit(**kwargs)
