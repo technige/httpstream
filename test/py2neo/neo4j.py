@@ -358,12 +358,8 @@ class GraphDatabaseService(Cacheable, Resource):
         for entity in entities:
             if entity is None:
                 continue
-            elif isinstance(entity, Node):
-                batch.delete_node(entity)
-            elif isinstance(entity, Relationship):
-                batch.delete_relationship(entity)
             else:
-                raise TypeError(entity)
+                batch.delete(entity)
         batch._submit()
 
     def find(self, label, property_key=None, property_value=None):
