@@ -7,12 +7,12 @@ import re
 
 from httpstream import (
     Resource as _Resource, NotFound, URI,
-    Request as _Request, Response as _Response,
+    Request as _Request
 )
 from jsonstream import assembled
 
 from .mixins import Cacheable
-from .util import compact, flatten, has_all, quote
+from .util import compact, flatten, has_all, is_collection, quote
 
 
 DEFAULT_SCHEME = "http"
@@ -36,7 +36,7 @@ def _hydrated(data):
                 return cls._hydrated(data)
         else:
             raise ValueError("Cannot determine object type", data)
-    elif hasattr(data, "__iter__"):
+    elif is_collection(data):
         # list or tuple but not string
         return type(data)([_hydrated(datum) for datum in data])
     else:
@@ -135,12 +135,7 @@ class Resource(object):
             return iter(self._metadata.items())
 
     def __init__(self, uri):
-        if isinstance(uri, int):
-            self._resource = _Resource(None)
-            self._placeholder = uri
-        else:
-            self._resource = _Resource(uri)
-            self._placeholder = None
+        self._resource = _Resource(uri)
         self._metadata = None
         self._subresources = {}
         self.__cypher = None
@@ -162,18 +157,12 @@ class Resource(object):
 
     @property
     def __uri__(self):
-        if self.is_placeholder:
-            return "{{{0}}}".format(self._placeholder)
-        else:
-            return self._resource.__uri__
+        return self._resource.__uri__
 
     @property
     def __relative_uri__(self):
-        if self.is_placeholder:
-            return self.__uri__
-        else:
-            offset = len(self.graph_db.__uri__)
-            return str(self._resource.__uri__)[offset:]
+        offset = len(self.graph_db.__uri__)
+        return URI(str(self._resource.__uri__)[offset:])
 
     @property
     def __metadata__(self):
@@ -189,10 +178,6 @@ class Resource(object):
         :return: :py:const:`True` if this entity is abstract
         """
         return not bool(self.__uri__)
-
-    @property
-    def is_placeholder(self):
-        return self._placeholder is not None
 
     @property
     def service_root(self):
@@ -218,27 +203,35 @@ class Resource(object):
         return self._resource.request(method, body, headers)
 
     def _get(self, headers=None):
+        headers = headers or {}
+        headers.setdefault("X-Stream", "true;format=pretty")
         return self._resource.get(headers)
 
     def _put(self, body=None, headers=None):
+        headers = headers or {}
+        headers.setdefault("X-Stream", "true;format=pretty")
         return self._resource.put(body, headers)
 
     def _post(self, body=None, headers=None):
+        headers = headers or {}
+        headers.setdefault("X-Stream", "true;format=pretty")
         return self._resource.post(body, headers)
 
     def _delete(self, headers=None):
+        headers = headers or {}
+        headers.setdefault("X-Stream", "true;format=pretty")
         return self._resource.delete(headers)
 
     def _subresource(self, key, cls=None):
         if key not in self._subresources:
             try:
-                if cls:
-                    self._subresources[key] = cls(self.__metadata__[key])
-                else:
-                    self._subresources[key] = Resource(self.__metadata__[key])
+                uri = URI(self.__metadata__[key])
             except KeyError:
                 raise KeyError("Key {0} not found in resource "
                                "metadata".format(repr(key)), self.__metadata__)
+            if not cls:
+                cls = Resource
+            self._subresources[key] = cls(uri)
         return self._subresources[key]
 
 
@@ -303,8 +296,8 @@ class GraphDatabaseService(Cacheable, Resource):
             from the graph and cannot be undone.
         """
         batch = WriteBatch(self)
-        batch._post(self._cypher_uri, {"query": "START r=rel(*) DELETE r"})
-        batch._post(self._cypher_uri, {"query": "START n=node(*) DELETE n"})
+        batch._append_cypher("START r=rel(*) DELETE r")
+        batch._append_cypher("START n=node(*) DELETE n")
         batch._submit()
 
     def create(self, *abstracts):
@@ -1045,7 +1038,7 @@ class Node(_Entity):
     def __str__(self):
         """ Return Cypher/Geoff style representation of this node.
         """
-        if self.is_abstract():
+        if self.is_abstract:
             return "({0})".format(json.dumps(self._properties, separators=(",", ":")))
         elif self._properties:
             return "({0} {1})".format(
@@ -1071,9 +1064,7 @@ class Node(_Entity):
         :return: integer ID of this node within the database or
             :py:const:`None` if abstract
         """
-        if self.is_placeholder:
-            return self.__uri__
-        elif self.is_abstract:
+        if self.is_abstract:
             return None
         else:
             return int('0' + str(self.__uri__).rpartition('/')[-1])
@@ -1330,9 +1321,7 @@ class Relationship(_Entity):
         :return: integer ID of this relationship within the database or
             :py:const:`None` if abstract
         """
-        if self.is_placeholder:
-            return self.__uri__
-        elif self.is_abstract:
+        if self.is_abstract:
             return None
         else:
             return int('0' + str(self.__uri__).rpartition('/')[-1])
@@ -1566,7 +1555,7 @@ class Path(object):
             if node is None:
                 path.append("(n{0})".format(i))
                 values.append("n{0}".format(i))
-            elif node.is_abstract():
+            elif node.is_abstract:
                 path.append("(n{0} {{p{0}}})".format(i))
                 params["p{0}".format(i)] = compact(node._properties)
                 values.append("n{0}".format(i))
@@ -1909,7 +1898,7 @@ def _cast(obj, cls=(Node, Relationship), abstract=None):
         raise TypeError(obj)
     if not isinstance(entity, cls):
         raise TypeError(obj)
-    if abstract is not None and bool(abstract) != bool(entity.is_abstract()):
+    if abstract is not None and bool(abstract) != bool(entity.is_abstract):
         raise TypeError(obj)
     return entity
 
@@ -1935,8 +1924,15 @@ class _Batch(Resource):
             self.status_code = result.get("status", 200)
             self.location = URI(result.get("location"))
 
-    def __init__(self, uri):
-        Resource.__init__(self, uri)
+    @staticmethod
+    def _uri_for(entity, cls=(Node, Relationship), abstract=None):
+        if isinstance(entity, int):
+            return "{{{0}}}".format(entity)
+        else:
+            return _cast(entity, cls=cls, abstract=abstract).__relative_uri__
+
+    def __init__(self, graph_db):
+        Resource.__init__(self, graph_db._subresource("batch").__uri__)
         self.clear()
 
     def __len__(self):
@@ -1945,20 +1941,20 @@ class _Batch(Resource):
     def __nonzero__(self):
         return bool(self.requests)
 
-    def _append(self, request):
+    def _append(self, request, **kwargs):
         self.requests.append(request)
 
-    def _append_get(self, uri):
-        self._append(_Batch.Request("GET", uri))
+    def _append_get(self, uri, **kwargs):
+        self._append(_Batch.Request("GET", uri), **kwargs)
 
-    def _append_put(self, uri, body=None):
-        self._append(_Batch.Request("PUT", uri, body))
+    def _append_put(self, uri, body=None, **kwargs):
+        self._append(_Batch.Request("PUT", uri, body), **kwargs)
 
-    def _append_post(self, uri, body=None):
-        self._append(_Batch.Request("POST", uri, body))
+    def _append_post(self, uri, body=None, **kwargs):
+        self._append(_Batch.Request("POST", uri, body), **kwargs)
 
-    def _append_delete(self, uri):
-        self._append(_Batch.Request("DELETE", uri))
+    def _append_delete(self, uri, **kwargs):
+        self._append(_Batch.Request("DELETE", uri), **kwargs)
 
     def _append_cypher(self, query, **params):
         if params:
@@ -2003,7 +1999,7 @@ class _Batch(Resource):
 class ReadBatch(_Batch):
 
     def __init__(self, graph_db):
-        _Batch.__init__(self, graph_db._subresource("batch"))
+        _Batch.__init__(self, graph_db)
 
     def _index(self, content_type, index):
         if isinstance(index, Index):
@@ -2039,16 +2035,7 @@ class ReadBatch(_Batch):
 class WriteBatch(_Batch):
 
     def __init__(self, graph_db):
-        _Batch.__init__(self, graph_db._subresource("batch"))
-
-    def _post(self, uri, body=None):
-        self._append(rest.Request(self._graph_db, "POST", uri, body))
-
-    def _delete(self, uri, body=None):
-        self._append(rest.Request(self._graph_db, "DELETE", uri, body))
-
-    def _put(self, uri, body=None):
-        self._append(rest.Request(self._graph_db, "PUT", uri, body))
+        _Batch.__init__(self, graph_db)
 
     def create(self, abstract):
         """ Create a node or relationship based on the abstract entity
@@ -2069,10 +2056,11 @@ class WriteBatch(_Batch):
             uri = self.graph_db._node_resource.__relative_uri__
             body = compact(entity._properties)
         elif isinstance(entity, Relationship):
-            uri = URI.join(entity.start_node.__relative_uri__, "relationship")
+            uri = URI.join(_Batch._uri_for(entity.start_node, abstract=False),
+                           "relationships")
             body = {
                 "type": entity._type,
-                "to": URI.join(entity.end_node.__relative_uri__, "relationship")
+                "to": str(_Batch._uri_for(entity.end_node, abstract=False))
             }
             if entity._properties:
                 body["data"] = compact(entity._properties)
@@ -2086,7 +2074,7 @@ class WriteBatch(_Batch):
 
         :param rel_abstract: relationship abstract to be fetched or created
         """
-        rel = _cast(rel_abstract, Relationship, abstract=True)
+        rel = _cast(rel_abstract, cls=Relationship, abstract=True)
         if not (isinstance(rel._start_node, Node) or rel._start_node is None):
             raise TypeError("Relationship start node must be a "
                             "Node instance or None")
@@ -2126,8 +2114,7 @@ class WriteBatch(_Batch):
 
         :param entity: concrete node or relationship to be deleted
         """
-        entity = _cast(entity, abstract=False)
-        self._delete(rest.URI(entity).reference)
+        self._append_delete(_Batch._uri_for(entity, abstract=False))
 
     def set_property(self, entity, key, value):
         """ Set a single property on an entity.
@@ -2139,9 +2126,8 @@ class WriteBatch(_Batch):
         if value is None:
             self.delete_property(entity, key)
         else:
-            entity = _cast(entity, abstract=False)
-            uri = rest.URI(entity.__metadata__['property'].format(key=quote(key, "")))
-            self._put(uri.reference, value)
+            self._append_put(URI.join(_Batch._uri_for(entity, abstract=False),
+                                      "properties", key), value)
 
     def set_properties(self, entity, properties):
         """ Replace all properties on an entity.
@@ -2149,9 +2135,8 @@ class WriteBatch(_Batch):
         :param entity: concrete entity on which to set properties
         :param properties: dictionary of properties
         """
-        entity = _cast(entity, abstract=False)
-        uri = rest.URI(entity.__metadata__['properties'])
-        self._put(uri.reference, compact(properties))
+        self._append_put(URI.join(_Batch._uri_for(entity, abstract=False),
+                                  "properties"), compact(properties))
 
     def delete_property(self, entity, key):
         """ Delete a single property from an entity.
@@ -2159,18 +2144,16 @@ class WriteBatch(_Batch):
         :param entity: concrete entity from which to delete property
         :param key: property key
         """
-        entity = _cast(entity, abstract=False)
-        uri = rest.URI(entity.__metadata__['property'].format(key=quote(key, "")))
-        self._delete(uri.reference)
+        self._append_delete(URI.join(_Batch._uri_for(entity, abstract=False),
+                                     "properties", key))
 
     def delete_properties(self, entity):
         """ Delete all properties from an entity.
 
         :param entity: concrete entity from which to delete properties
         """
-        entity = _cast(entity, abstract=False)
-        uri = rest.URI(entity.__metadata__['properties'])
-        self._delete(uri.reference)
+        self._append_delete(URI.join(_Batch._uri_for(entity, abstract=False),
+                                     "properties"))
 
     def _node_uri(self, node):
         if isinstance(node, Node):

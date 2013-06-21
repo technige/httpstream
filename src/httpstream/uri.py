@@ -1,29 +1,36 @@
 
 try:
-    from urllib.parse import quote, urlparse
+    from urllib.parse import quote, urlparse, urlunparse
 except ImportError:
-    from urllib import quote
-    from urlparse import urlparse
+    from urllib import quote, quote_plus
+    from urlparse import urlparse, urlunparse
 
 
 class URI(object):
 
     @classmethod
-    def join(cls, *parts):
-        parts = list(str(part) for part in parts)
-        for i, part in enumerate(parts):
-            if i < len(parts) - 1:
-                parts[i] = parts[i].rstrip("/")
-            if i > 0:
-                parts[i] = quote(parts[i].lstrip("/"))
-        return "/".join(parts)
+    def join(cls, *parts, **kwargs):
+        if len(parts) >= 2:
+            parts = list(str(part) for part in parts)
+            plus = kwargs.get("plus", False)
+            safe = kwargs.get("safe", "")
+            for i, part in enumerate(parts):
+                if i == 0:
+                    parts[i] = parts[i].rstrip("/")
+                elif plus:
+                    parts[i] = quote_plus(parts[i], safe=safe)
+                else:
+                    parts[i] = quote(parts[i], safe=safe)
+        if kwargs.get("trailing_slash"):
+            return URI("/".join(parts) + "/")
+        else:
+            return URI("/".join(parts))
 
     def __init__(self, uri):
         try:
-            self.__uri__ = str(uri.__uri__)
+            parsed = urlparse(str(uri.__uri__))
         except AttributeError:
-            self.__uri__ = str(uri)
-        parsed = urlparse(self.__uri__)
+            parsed = urlparse(str(uri))
         self.scheme = parsed.scheme
         self.netloc = parsed.netloc
         self.path = parsed.path
@@ -54,6 +61,11 @@ class URI(object):
         return len(str(self.__uri__))
 
     @property
+    def __uri__(self):
+        return urlunparse((self.scheme, self.netloc, self.path,
+                           self.params, self.query, self.fragment))
+
+    @property
     def base(self):
         return "{0}://{1}".format(self.scheme, self.netloc)
 
@@ -67,3 +79,12 @@ class URI(object):
             ref.append("#")
             ref.append(self.fragment)
         return "".join(ref)
+
+    def format(self, *args, **kwargs):
+        return URI(self.__uri__.format(
+            *[quote(arg, safe="") for arg in args],
+            **dict(
+                (key, quote(value, safe=""))
+                for key, value in kwargs.items()
+            )
+        ))

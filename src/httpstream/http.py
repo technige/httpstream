@@ -183,7 +183,7 @@ class Request(object):
 
     def submit(self, **kwargs):
         follow = kwargs.get("follow", 5)
-        uri = self.uri
+        uri = URI(self.uri)
         while uri:
             http, rs = self._submit(self.method, uri, self.body, self.headers)
             if rs.status // 100 == 3:

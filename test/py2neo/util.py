@@ -5,6 +5,22 @@ except ImportError:
     from urllib import quote as _quote
 
 
+def is_collection(obj):
+    """ Returns true for any iterable which is not a string or byte sequence.
+    """
+    if isinstance(obj, bytes):
+        return False
+    try:
+        iter(obj)
+    except TypeError:
+        return False
+    try:
+        hasattr(None, obj)
+    except TypeError:
+        return True
+    return False
+
+
 def compact(obj):
     """ Return a copy of an object with all :py:const:`None` values removed.
     """
@@ -16,7 +32,7 @@ def compact(obj):
 
 def flatten(*values):
     for value in values:
-        if hasattr(value, "__iter__"):
+        if is_collection(value):
             for val in value:
                 yield val
         else:
