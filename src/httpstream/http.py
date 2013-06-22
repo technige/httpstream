@@ -23,6 +23,7 @@ except ImportError:
 import json
 from threading import local
 
+from iana.http import *
 from jsonstream import JSONStream
 
 from .exceptions import TooManyRedirects
@@ -31,6 +32,8 @@ from .uri import URI
 
 default_charset = "ISO-8859-1"
 default_chunk_size = 4096
+default_max_redirects = 5
+
 redirects = {}
 
 
@@ -94,9 +97,9 @@ class ConnectionPool(object):
         if ":" in netloc:
             key = (scheme, netloc)
         elif scheme == "https":
-            key = (scheme, netloc + ":443")
+            key = (scheme, netloc + ":" + str(HTTPS_PORT))
         elif scheme == "http":
-            key = (scheme, netloc + ":80")
+            key = (scheme, netloc + ":" + str(HTTP_PORT))
         else:
             raise ValueError("Unknown scheme " + repr(scheme))
         if key not in cls._puddles:
@@ -182,20 +185,24 @@ class Request(object):
         return http, response
 
     def submit(self, **kwargs):
-        follow = kwargs.get("follow", 5)
+        follow = kwargs.get("follow", default_max_redirects)
         uri = URI(self.uri)
         while uri:
             http, rs = self._submit(self.method, uri, self.body, self.headers)
-            if rs.status // 100 == 3:
+            status_class = rs.status // 100
+            if status_class == 3:
                 if follow:
                     location = rs.getheader("Location")
-                    if rs.status in (301, 308):
-                        # Moved Permanently, Permanent Redirect
+                    if rs.status in (MOVED_PERMANENTLY, PERMANENT_REDIRECT):
                         redirects[uri] = location
                     uri = location
                     follow -= 1
                 else:
                     uri = None
+            elif status_class == 4:
+                raise ClientError(http, self, rs, **kwargs)
+            elif status_class == 5:
+                raise ServerError(http, self, rs, **kwargs)
             else:
                 return Response(http, self, rs, **kwargs)
         raise TooManyRedirects()
@@ -207,6 +214,10 @@ class Response(object):
         self._http = http
         self._request = request
         self._response = response
+        try:
+            self._reason = kwargs.pop("reason")
+        except KeyError:
+            self._reason = None
         self._kwargs = kwargs
 
     def __del__(self):
@@ -242,7 +253,10 @@ class Response(object):
 
     @property
     def reason(self):
-        return responses[self.status_code]
+        if self._reason:
+            return self._reason
+        else:
+            return responses[self.status_code]
 
     @property
     def headers(self):
@@ -253,7 +267,7 @@ class Response(object):
         try:
             content_type = [
                 _.strip()
-                for _ in self["Content-Type"].split(";")
+                for _ in self._response.getheader("Content-Type").split(";")
             ]
         except AttributeError:
             return None
@@ -264,11 +278,16 @@ class Response(object):
         try:
             content_type = dict(
                 _.strip().partition("=")[0::2]
-                for _ in self["Content-Type"].split(";")
+                for _ in self._response.getheader("Content-Type").split(";")
             )
         except AttributeError:
             return default_charset
         return content_type.get("charset", default_charset)
+
+    @property
+    def is_json(self):
+        return self.content_type in ("application/json",
+                                     "application/x-javascript")
 
     def __iter__(self):
         def response_iterator(chunk_size):
@@ -291,13 +310,28 @@ class Response(object):
                 yield self._decode(self._response.read())
             self._release()
         iterator = response_iterator(self._kwargs.get("chunk_size"))
-        if self.status_code == 204:
+        if self.status_code == NO_CONTENT:
             return iter([])
-        elif self.content_type in ("application/json",
-                                   "application/x-javascript"):
+        elif self.is_json:
             return iter(JSONStream(iterator))
         else:
             return iterator
+
+
+class ClientError(Exception, Response):
+
+    def __init__(self, http, request, response, **kwargs):
+        assert response.status // 100 == 4
+        Response.__init__(self, http, request, response, **kwargs)
+        Exception.__init__(self, self.reason)
+
+
+class ServerError(Exception, Response):
+
+    def __init__(self, http, request, response, **kwargs):
+        assert response.status // 100 == 5
+        Response.__init__(self, http, request, response, **kwargs)
+        Exception.__init__(self, self.reason)
 
 
 class Resource(object):

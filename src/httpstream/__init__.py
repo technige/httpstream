@@ -17,5 +17,5 @@
 
 
 from .exceptions import *
-from .http import Request, Response, Resource
+from .http import Resource, Request, Response, ClientError, ServerError
 from .uri import URI

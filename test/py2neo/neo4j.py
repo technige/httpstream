@@ -6,11 +6,16 @@ import logging
 import re
 
 from httpstream import (
-    Resource as _Resource, NotFound, URI,
-    Request as _Request
+    Resource as _Resource,
+    ClientError as _ClientError,
+    ServerError as _ServerError,
+    URI,
+    Request as _Request,
 )
+from iana.http import NOT_FOUND
 from jsonstream import assembled
 
+from .exceptions import ClientError, ServerError, CypherError, BatchError
 from .mixins import Cacheable
 from .util import compact, flatten, has_all, is_collection, quote, version_tuple
 
@@ -207,17 +212,25 @@ class Resource(object):
         if not self.is_abstract:
             self._metadata = Resource.Metadata.load(self._resource)
 
+    def _request(self, method, *args, **kwargs):
+        try:
+            return method(*args, **kwargs)
+        except _ClientError as e:
+            raise ClientError(e._http, e._request, e._response, **e._kwargs)
+        except _ServerError as e:
+            raise ServerError(e._http, e._request, e._response, **e._kwargs)
+
     def _get(self, headers=None):
-        return self._resource.get(headers)
+        return self._request(self._resource.get, headers)
 
     def _put(self, body=None, headers=None):
-        return self._resource.put(body, headers)
+        return self._request(self._resource.put, body, headers)
 
     def _post(self, body=None, headers=None):
-        return self._resource.post(body, headers)
+        return self._request(self._resource.post, body, headers)
 
     def _delete(self, headers=None):
-        return self._resource.delete(headers)
+        return self._request(self._resource.delete, headers)
 
     def _subresource(self, key, cls=None):
         if key not in self._subresources:
@@ -692,10 +705,22 @@ class Cypher(Cacheable, Resource):
             self._query = query
 
         def execute(self, **params):
-            return Cypher.ResultSet(self._cypher._post({
-                "query": self._query,
-                "params": params,
-            }))
+            try:
+                results = self._cypher._post({
+                    "query": self._query,
+                    "params": params,
+                })
+            except ClientError as e:
+                if e.exception:
+                    # A CustomCypherError is a dynamically created subclass of
+                    # CypherError with the same name as the underlying server
+                    # exception
+                    CustomCypherError = type(e.exception, (CypherError,), {})
+                    raise CustomCypherError(e)
+                else:
+                    raise CypherError(e)
+            else:
+                return Cypher.ResultSet(results)
 
     class ResultSet(object):
 
@@ -788,11 +813,16 @@ class _Entity(Resource):
     def exists(self):
         """ Determine whether this entity still exists in the database.
         """
+        # TODO: make this a property
         try:
             self._get()
+        except ClientError as err:
+            if err.status_code == NOT_FOUND:
+                return False
+            else:
+                raise
+        else:
             return True
-        except NotFound:
-            return False
 
     def get_properties(self):
         """ Fetch all properties.
@@ -1978,9 +2008,20 @@ class _Batch(Resource):
         """ Submit the current batch but do not parse the results. This is for
         internal use where the results are discarded.
         """
-        results = self._post(self._body)
-        self.clear()
-        return results
+        try:
+            results = self._post(self._body)
+        except (ClientError, ServerError) as e:
+            if e.exception:
+                # A CustomBatchError is a dynamically created subclass of
+                # BatchError with the same name as the underlying server
+                # exception
+                CustomBatchError = type(e.exception, (BatchError,), {})
+                raise CustomBatchError(e)
+            else:
+                raise BatchError(e)
+        else:
+            self.clear()
+            return results
 
     def submit(self):
         """ Submit the current batch of requests, iterating through the
