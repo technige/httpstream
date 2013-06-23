@@ -21,7 +21,7 @@
 
 from .exceptions import AwaitingData, EndOfStream, UnexpectedCharacter
 from .tokeniser import Tokeniser
-from .util import assembled, merged
+from .util import assembled, grouped
 
 
 # Token constants used for expectation management
@@ -38,10 +38,9 @@ class JSONStream(object):
     """ Streaming JSON decoder.
     """
 
-    def __init__(self, source, **kwargs):
+    def __init__(self, source):
         self.tokeniser = Tokeniser()
         self.source = iter(source)
-        self.empties = kwargs.get("empties", False)
         self.path = []
         self._expectation = VALUE | OPENING_BRACKET | OPENING_BRACE
 
@@ -134,8 +133,6 @@ class JSONStream(object):
             self._expectation = VALUE | OPENING_BRACKET | OPENING_BRACE
 
     def __iter__(self):
-        last_src = None
-        last_key = None
         while True:
             try:
                 try:
@@ -150,40 +147,19 @@ class JSONStream(object):
                         elif src == ':':
                             self._handle_colon(src)
                         elif src == '[':
-                            if self._in_array() or self._in_object():
-                                last_key = self.path[-1]
-                            else:
-                                last_key = None
+                            yield tuple(self.path), []
                             self._open_array(src)
                         elif src == ']':
                             self._close_array(src)
-                            if self.empties and last_src == '[':
-                                if self.path:
-                                    path = list(self.path)
-                                    path[-1] = last_key
-                                    yield tuple(path), []
-                                else:
-                                    yield (), []
                         elif src == '{':
-                            if self._in_array() or self._in_object():
-                                last_key = self.path[-1]
-                            else:
-                                last_key = None
+                            yield tuple(self.path), {}
                             self._open_object(src)
                         elif src == '}':
                             self._close_object(src)
-                            if self.empties and last_src == '{':
-                                if self.path:
-                                    path = list(self.path)
-                                    path[-1] = last_key
-                                    yield tuple(path), {}
-                                else:
-                                    yield (), {}
                         else:
                             out = self._next_value(src, value)
                             if out:
                                 yield out
-                        last_src = src
                     except AwaitingData:
                         break
             except EndOfStream:

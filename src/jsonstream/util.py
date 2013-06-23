@@ -19,7 +19,48 @@
 """
 
 
-def assembled(iterable, key_offset=0):
+from itertools import groupby
+
+
+def _merged(obj, key, value):
+    """ Returns object with value merged at a position described by iterable
+    key. The key describes a navigable path through the object hierarchy with
+    integer items describing list indexes and other types of items describing
+    dictionary keys.
+
+        >>> obj = None
+        >>> obj = _merged(obj, ("drink",), "lemonade")
+        >>> obj
+        {'drink': 'lemonade'}
+        >>> obj = _merged(obj, ("cutlery", 0), "knife")
+        >>> obj = _merged(obj, ("cutlery", 1), "fork")
+        >>> obj = _merged(obj, ("cutlery", 2), "spoon")
+        >>> obj
+        {'cutlery': ['knife', 'fork', 'spoon'], 'drink': 'lemonade'}
+
+    """
+    if key:
+        k = key[0]
+        if isinstance(k, int):
+            if isinstance(obj, list):
+                obj = list(obj)
+            else:
+                obj = []
+            while len(obj) <= k:
+                obj.append(None)
+        else:
+            if isinstance(obj, dict):
+                obj = dict(obj)
+            else:
+                obj = {}
+            obj.setdefault(k, None)
+        obj[k] = _merged(obj[k], key[1:], value)
+        return obj
+    else:
+        return value
+
+
+def assembled(iterable):
     """ Returns a JSON-derived value from a set of key-value pairs as produced
     by the JSONStream process. This operates in a similar way to the built-in
     `dict` function. Internally, this uses the `merged` function on each pair
@@ -39,43 +80,22 @@ def assembled(iterable, key_offset=0):
     """
     obj = None
     for key, value in iterable:
-        obj = merged(obj, key[key_offset:], value)
+        obj = _merged(obj, key, value)
     return obj
 
 
-def merged(obj, key, value):
-    """ Returns object with value merged at a position described by iterable
-    key. The key describes a navigable path through the object hierarchy with
-    integer items describing list indexes and other types of items describing
-    dictionary keys.
-    
-        >>> obj = None
-        >>> obj = merged(obj, ("drink",), "lemonade")
-        >>> obj
-        {'drink': 'lemonade'}
-        >>> obj = merged(obj, ("cutlery", 0), "knife")
-        >>> obj = merged(obj, ("cutlery", 1), "fork")
-        >>> obj = merged(obj, ("cutlery", 2), "spoon")
-        >>> obj
-        {'cutlery': ['knife', 'fork', 'spoon'], 'drink': 'lemonade'}
-        
-    """
-    if key:
-        k = key[0]
-        if isinstance(k, int):
-            if isinstance(obj, list):
-                obj = list(obj)
-            else:
-                obj = []
-            while len(obj) <= k:
-                obj.append(None)
+def _group(iterable, level):
+    for key, value in iterable:
+        yield key[level:], value
+
+
+def grouped(iterable, level=1):
+    def _group_key(item):
+        key, value = item
+        if len(key) >= level:
+            return key[0:level]
         else:
-            if isinstance(obj, dict):
-                obj = dict(obj)
-            else:
-                obj = {}
-            obj.setdefault(k, None)
-        obj[k] = merged(obj[k], key[1:], value)
-        return obj
-    else:
-        return value
+            return None
+    for key, value in groupby(iterable, _group_key):
+        if key is not None:
+            yield key, _group(value, level)
