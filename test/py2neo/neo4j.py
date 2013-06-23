@@ -13,7 +13,7 @@ from httpstream import (
     Request as _Request,
 )
 from iana.http import NOT_FOUND
-from jsonstream import assembled
+from jsonstream import assembled, grouped
 
 from .exceptions import ClientError, ServerError, CypherError, BatchError
 from .mixins import Cacheable
@@ -279,9 +279,9 @@ class GraphDatabaseService(Cacheable, Resource):
 
     def __init__(self, uri=None):
         if uri is None:
-            Resource.__init__(self, ServiceRoot().graph_db.__uri__)
-        else:
-            Resource.__init__(self, uri)
+            uri = ServiceRoot().graph_db.__uri__
+        Resource.__init__(self, uri)
+        self._indexes = {Node: {}, Relationship: {}}
 
     def __nonzero__(self):
         """ Return :py:const:`True` is this graph contains at least one
@@ -293,10 +293,6 @@ class GraphDatabaseService(Cacheable, Resource):
         """ Return the size of this graph (i.e. the number of relationships).
         """
         return self.size()
-
-    @property
-    def _node_resource(self):
-        return self._subresource("node")
 
     def clear(self):
         """ Clear all nodes and relationships from the graph.
@@ -352,7 +348,7 @@ class GraphDatabaseService(Cacheable, Resource):
         batch = WriteBatch(self)
         for abstract in abstracts:
             batch.create(abstract)
-        return batch.submit()
+        return list(batch.submit())
 
     @property
     def cypher(self):
@@ -373,20 +369,18 @@ class GraphDatabaseService(Cacheable, Resource):
         batch._submit()
 
     def find(self, label, property_key=None, property_value=None):
+        """ Iterate through all nodes with the specified label, optionally
+        also with a property key and value.
+        """
+        uri = URI.join(URI(self), "label", label, "nodes")
         if property_key:
-            uri = "{0}label/{1}/nodes?{2}={3}".format(
-                self.__uri__, str(label), quote(property_key),
-                quote(json.dumps(property_value))
-            )
-        else:
-            uri = "{0}label/{1}/nodes".format(self.__uri__, str(label))
+            uri.query = {property_key: json.dumps(property_value)}
         try:
-            return [
-                Node(result["self"])
-                for result in self._send(rest.Request(self, "GET", uri)).body
-            ]
-        except rest.ResourceNotFound:
-            return None
+            for i, result in grouped(Resource(uri)._get()):
+                yield _hydrated(assembled(result))
+        except ClientError as err:
+            if err.status_code != NOT_FOUND:
+                raise
 
     def get_properties(self, *entities):
         """ Fetch properties for multiple nodes and/or relationships as part
@@ -475,8 +469,8 @@ class GraphDatabaseService(Cacheable, Resource):
                 query += " MATCH (a)-[r:`" + str(rel_type) + "`]->(b) RETURN r"
         if limit is not None:
             query += " LIMIT {0}".format(int(limit))
-        data, metadata = cypher.execute(self, query, params)
-        return [row[0] for row in data]
+        for result in self.cypher.execute(query, **params):
+            yield result[0]
 
     def match_one(self, start_node=None, rel_type=None, end_node=None,
                   bidirectional=False):
@@ -495,63 +489,56 @@ class GraphDatabaseService(Cacheable, Resource):
         .. seealso::
            :py:func:`GraphDatabaseService.match <py2neo.neo4j.GraphDatabaseService.match>`
         """
-        rels = self.match(start_node, rel_type, end_node, bidirectional, 1)
-        if rels:
-            return rels[0]
-        else:
-            return None
+        for rel in self.match(start_node, rel_type, end_node, bidirectional, 1):
+            return rel
+        return None
 
     @property
     def neo4j_version(self):
         return version_tuple(self.__metadata__["neo4j_version"])
 
-    def node(self, id):
+    def node(self, id_):
         """ Fetch a node by ID.
         """
-        return Node(self.__metadata__['node'] + "/" + str(id))
+        return Node(URI.join(URI(self), "node", id_))
 
     @property
     def node_labels(self):
         """ Return the set of node labels currently defined within this
         database instance.
         """
-        uri = "{0}labels".format(self.__uri__)
+        resource = Resource(URI.join(URI(self), "labels"))
         try:
-            return set(self._send(rest.Request(self, "GET", uri)).body)
-        except rest.ResourceNotFound:
-            return None
+            return set(_hydrated(assembled(resource._get())))
+        except ClientError as err:
+            if err.status_code == NOT_FOUND:
+                raise NotImplementedError("Node labels not available for this "
+                                          "Neo4j server version")
+            else:
+                raise
 
     def order(self):
         """ Fetch the number of nodes in this graph.
         """
-        data, metadata = cypher.execute(self, "START n=node(*) RETURN count(n)")
-        if data and data[0]:
-            return data[0][0]
-        else:
-            raise EnvironmentError("Unable to count nodes")
+        return self.cypher.execute_one("START n=node(*) RETURN count(n)")
 
-    def relationship(self, id):
+    def relationship(self, id_):
         """ Fetch a relationship by ID.
         """
-        uri = "{0}relationship/{1}".format(self.__uri__.base, id)
-        return Relationship(uri)
+        return Relationship(URI.join(URI(self), "relationship", id_))
 
     @property
     def relationship_types(self):
         """ Return the set of relationship types currently defined within this
         database instance.
         """
-        uri = self.__metadata__['relationship_types']
-        return set(self._send(rest.Request(self, "GET", uri)).body)
+        resource = self._subresource("relationship_types")
+        return set(_hydrated(assembled(resource._get())))
 
     def size(self):
         """ Fetch the number of relationships in this graph.
         """
-        data, metadata = cypher.execute(self, "START r=rel(*) RETURN count(r)")
-        if data and data[0]:
-            return data[0][0]
-        else:
-            raise EnvironmentError("Unable to count relationships")
+        return self.cypher.execute_one("START r=rel(*) RETURN count(r)")
 
     def get_indexes(self, content_type):
         """ Fetch a dictionary of all available indexes of a given type.
@@ -747,13 +734,14 @@ class Cypher(Cacheable, Resource):
             self._record = None
 
         def __iter__(self):
-            for row_id, result in groupby(self._results, self._row_id):
-                if row_id[0] == "columns":
-                    self._columns = tuple(_hydrated(assembled(result, key_offset=1)))
+            for key, section in grouped(self._results):
+                if key[0] == "columns":
+                    self._columns = tuple(_hydrated(assembled(section)))
                     self._record = namedtuple("Record", self._columns,
                                               rename=True)
-                else:
-                    yield self._record(*_hydrated(assembled(result, key_offset=2)))
+                elif key[0] == "data":
+                    for i, row in grouped(section):
+                        yield self._record(*_hydrated(assembled(row)))
 
         @property
         def columns(self):
@@ -2027,8 +2015,8 @@ class _Batch(Resource):
         """ Submit the current batch of requests, iterating through the
         results.
         """
-        for row_id, result in groupby(self._submit(), lambda _: _[0][0]):
-            response = _Batch.Response(assembled(result, key_offset=1))
+        for i, result in grouped(self._submit()):
+            response = _Batch.Response(assembled(result))
             body = response.body
             if isinstance(body, dict) and has_all(body, Cypher.ResultSet.signature):
                 yield Cypher.ResultSet._hydrated(response.body)
@@ -2093,7 +2081,7 @@ class WriteBatch(_Batch):
         """
         entity = _cast(abstract, abstract=True)
         if isinstance(entity, Node):
-            uri = self.graph_db._node_resource.__relative_uri__
+            uri = self.graph_db._subresource("node").__relative_uri__
             body = compact(entity._properties)
         elif isinstance(entity, Relationship):
             uri = URI.join(_Batch._uri_for(entity.start_node, abstract=False),
