@@ -1,12 +1,26 @@
 
 try:
-    from urllib.parse import quote, urlparse, urlunparse
+    from urllib.parse import quote, quote_plus, unquote, urlparse, urlunparse
 except ImportError:
-    from urllib import quote, quote_plus
+    from urllib import quote, quote_plus, unquote
     from urlparse import urlparse, urlunparse
 
 
 class URI(object):
+
+    @staticmethod
+    def _pack_query_param(key, value):
+        if value is None:
+            return quote(key, safe="")
+        else:
+            return quote(key, safe="") + "=" + quote(value, safe="")
+
+    @staticmethod
+    def _unpack_query_param(item):
+        if "=" in item:
+            return map(item.partition("=")[0::2], unquote)
+        else:
+            return unquote(item), None
 
     @classmethod
     def join(cls, *parts, **kwargs):
@@ -64,6 +78,25 @@ class URI(object):
     def __uri__(self):
         return urlunparse((self.scheme, self.netloc, self.path,
                            self.params, self.query, self.fragment))
+
+    @property
+    def query(self):
+        return "&".join(
+            self._pack_query_param(key, value)
+            for key, value in self._query.items()
+        )
+
+    @query.setter
+    def query(self, value):
+        if isinstance(value, dict):
+            self._query = value
+        elif value:
+            self._query = dict(
+                self._unpack_query_param(item)
+                for item in str(value).split("&")
+            )
+        else:
+            self._query = {}
 
     @property
     def base(self):
