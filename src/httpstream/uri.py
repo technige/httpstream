@@ -18,7 +18,7 @@ class URI(object):
     @staticmethod
     def _unpack_query_param(item):
         if "=" in item:
-            return map(item.partition("=")[0::2], unquote)
+            return map(unquote, item.partition("=")[0::2])
         else:
             return unquote(item), None
 
