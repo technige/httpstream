@@ -133,6 +133,8 @@ class JSONStream(object):
             self._expectation = VALUE | OPENING_BRACKET | OPENING_BRACE
 
     def __iter__(self):
+        last_src = None
+        last_key = None
         while True:
             try:
                 try:
@@ -147,17 +149,36 @@ class JSONStream(object):
                         elif src == ':':
                             self._handle_colon(src)
                         elif src == '[':
+                            if self._in_array() or self._in_object():
+                                last_key = self.path[-1]
+                            else:
+                                last_key = None
                             self._open_array(src)
                         elif src == ']':
                             self._close_array(src)
+                            if last_src == '[':
+                                path = list(self.path)
+                                if path:
+                                    path[-1] = last_key
+                                yield tuple(path), []
                         elif src == '{':
+                            if self._in_array() or self._in_object():
+                                last_key = self.path[-1]
+                            else:
+                                last_key = None
                             self._open_object(src)
                         elif src == '}':
                             self._close_object(src)
+                            if last_src == '{':
+                                path = list(self.path)
+                                if path:
+                                    path[-1] = last_key
+                                yield tuple(path), {}
                         else:
                             out = self._next_value(src, value)
                             if out:
                                 yield out
+                        last_src = src
                     except AwaitingData:
                         break
             except EndOfStream:
