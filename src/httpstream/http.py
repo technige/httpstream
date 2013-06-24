@@ -181,7 +181,12 @@ class Request(object):
                 http.request(method, uri.reference, body, headers)
                 response = http.getresponse()
             else:
-                raise err
+                raise
+        except IOError:
+            http.close()
+            http.connect()
+            http.request(method, uri.reference, body, headers)
+            response = http.getresponse()
         return http, response
 
     def submit(self, **kwargs):
