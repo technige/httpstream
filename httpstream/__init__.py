@@ -16,6 +16,14 @@
 # limitations under the License.
 
 
+__author__ = "Nigel Small"
+__copyright__ = "2013, Nigel Small"
+__email__ = "nigel@nigelsmall.com"
+__license__ = "Apache License, Version 2.0"
+__package__ = "httpstream"
+__version__ = "0.9.2"
+
+
 from .exceptions import *
 from .http import Resource, Request, Response, ClientError, ServerError
 from .uri import URI
