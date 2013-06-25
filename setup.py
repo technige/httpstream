@@ -16,9 +16,6 @@
 # limitations under the License.
 
 
-from distribute_setup import use_setuptools
-use_setuptools()
-
 from setuptools import setup
 
 
@@ -44,6 +41,7 @@ setup(
         "httpstream",
     ],
     install_requires=[
+        "distribute",
         "jsonstream",
     ],
     license=__license__,
