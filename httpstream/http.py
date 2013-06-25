@@ -23,10 +23,10 @@ except ImportError:
 import json
 from threading import local
 
-from iana.http import *
 from jsonstream import JSONStream
 
 from .exceptions import TooManyRedirects
+from .numbers import *
 from .uri import URI
 
 
@@ -38,6 +38,10 @@ redirects = {}
 
 
 class ConnectionPuddle(local):
+    """ A collection of HTTP/HTTPS connections to a single network location
+    (i.e. host:port). Connections may be acquired and will be created if
+    necessary; after use, these must be released.
+    """
 
     _http_classes = {
         "http": HTTPConnection,
@@ -89,6 +93,9 @@ class ConnectionPuddle(local):
 
 
 class ConnectionPool(object):
+    """ A collection of :py:class:`ConnectionPuddle` objects for various
+    network locations.
+    """
 
     _puddles = {}
 

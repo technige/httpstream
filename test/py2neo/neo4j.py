@@ -12,7 +12,7 @@ from httpstream import (
     URI,
     Request as _Request,
 )
-from iana.http import NOT_FOUND
+from httpstream.numbers import NOT_FOUND
 from jsonstream import assembled, grouped
 
 from .exceptions import ClientError, ServerError, CypherError, BatchError

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright 2013, Nigel Small
+# Copyright 2012-2013 Nigel Small
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,24 +16,35 @@
 # limitations under the License.
 
 
-from distutils.core import setup
+from distribute_setup import use_setuptools
+use_setuptools()
+
+from setuptools import setup
+
+
+__author__ = "Nigel Small"
+__copyright__ = "2012-2013, Nigel Small"
+__license__ = "Apache License, Version 2.0"
+__package__ = "httpstream"
+__version__ = open("VERSION").read()
+
 
 setup(
-    name="httpstream",
-    version="0.2",
+    name=__package__,
+    version=__version__,
     description="Stream based HTTP client",
-    long_description="",
-    author="Nigel Small",
+    author=__author__,
     author_email="nigel@nigelsmall.com",
     url="https://github.com/nigelsmall/httpstream",
-    scripts=[],
-    package_dir={"": "src"},
     packages=[
-        "jsonstream",
         "httpstream",
     ],
-    license="Apache License, Version 2.0",
+    install_requires=[
+        "jsonstream",
+    ],
+    license=__license__,
     classifiers=[
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
@@ -41,5 +52,5 @@ setup(
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.3",
         "Topic :: Software Development",
-    ]
+    ],
 )
