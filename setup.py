@@ -33,6 +33,10 @@ setup(
     name=__package__,
     version=__version__,
     description="Stream based HTTP client",
+    long_description="HTTPStream is a HTTP client library for Python which is "
+                     "designed around iterable, streaming content that can "
+                     "be consumed as it is received. It uses jsonstream to "
+                     "allow large JSON documents to be decoded incrementally.",
     author=__author__,
     author_email="nigel@nigelsmall.com",
     url="https://github.com/nigelsmall/httpstream",
