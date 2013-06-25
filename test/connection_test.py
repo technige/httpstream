@@ -16,23 +16,13 @@
 # limitations under the License.
 
 
-try:
-    from http.client import HTTPException
-except ImportError:
-    from httplib import HTTPException
+from httpstream import Resource, NetworkAddressError
 
 
-class NetworkAddressError(IOError):
-
-    def __init__(self, socket_error, netloc=None):
-        self.netloc = netloc
-        if self.netloc:
-            message = "{0} [{1}]".format(socket_error.args[1], self.netloc)
-        else:
-            message = socket_error.args[1]
-        IOError.__init__(self, message)
-        self.__cause__ = socket_error
-
-
-class TooManyRedirects(HTTPException):
-    pass
+def test_unknown_hostname_will_fail():
+    resource = Resource("http://localtoast:6789")
+    try:
+        resource.get()
+        assert False
+    except NetworkAddressError:
+        assert True

@@ -21,11 +21,12 @@ try:
 except ImportError:
     from httplib import HTTPConnection, HTTPSConnection, responses, HTTPException, CannotSendRequest, BadStatusLine
 import json
+from socket import gaierror, herror, timeout
 from threading import local
 
 from jsonstream import JSONStream
 
-from .exceptions import TooManyRedirects
+from .exceptions import NetworkAddressError, TooManyRedirects
 from .numbers import *
 from .uri import URI
 
@@ -178,23 +179,27 @@ class Request(object):
         except KeyError:
             raise ValueError("Unsupported URI scheme {0}".format(
                 repr(uri.scheme)))
-        try:
-            http.request(method, uri.reference, body, headers)
-            response = http.getresponse()
-        except BadStatusLine as err:
-            if err.line == repr(""):
+
+        def send(reconnect=False):
+            if reconnect:
                 http.close()
                 http.connect()
-                http.request(method, uri.reference, body, headers)
-                response = http.getresponse()
-            else:
-                raise
-        except IOError:
-            http.close()
-            http.connect()
             http.request(method, uri.reference, body, headers)
-            response = http.getresponse()
-        return http, response
+            return http.getresponse()
+
+        try:
+            try:
+                response = send()
+            except BadStatusLine as err:
+                if err.line == repr(""):
+                    response = send(reconnect=True)
+                else:
+                    raise
+            except IOError:
+                response = send(reconnect=True)
+            return http, response
+        except (gaierror, herror) as err:
+            raise NetworkAddressError(err, netloc=uri.netloc)
 
     def submit(self, **kwargs):
         follow = kwargs.get("follow", default_max_redirects)
