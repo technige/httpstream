@@ -16,14 +16,13 @@
 # limitations under the License.
 
 
-from setuptools import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
-
-__author__ = "Nigel Small"
-__copyright__ = "2012-2013, Nigel Small"
-__license__ = "Apache License, Version 2.0"
-__package__ = "httpstream"
-__version__ = open("VERSION").read()
+from httpstream import (__author__, __email__, __license__, __package__,
+                        __version__)
 
 
 setup(
@@ -35,13 +34,12 @@ setup(
                      "be consumed as it is received. It uses jsonstream to "
                      "allow large JSON documents to be decoded incrementally.",
     author=__author__,
-    author_email="nigel@nigelsmall.com",
+    author_email=__email__,
     url="https://github.com/nigelsmall/httpstream",
     packages=[
         "httpstream",
     ],
     install_requires=[
-        "distribute",
         "jsonstream",
     ],
     license=__license__,

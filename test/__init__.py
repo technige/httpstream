@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright 2013, Nigel Small
+# Copyright 2012-2013 Nigel Small
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,14 +16,8 @@
 # limitations under the License.
 
 
-__author__ = "Nigel Small"
-__copyright__ = "2013, Nigel Small"
-__email__ = "nigel@nigelsmall.com"
-__license__ = "Apache License, Version 2.0"
-__package__ = "httpstream"
-__version__ = "0.9.2"
+import os
+import sys
+sys.path.insert(0, os.path.abspath(".."))
 
-
-from .exceptions import *
-from .http import Resource, Request, Response, ClientError, ServerError
-from .uri import URI
+import httpstream

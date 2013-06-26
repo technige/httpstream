@@ -17,15 +17,21 @@
 
 
 try:
-    from http.client import HTTPConnection, HTTPSConnection, responses, HTTPException, CannotSendRequest, BadStatusLine
+    from http.client import (BadStatusLine, CannotSendRequest, HTTPConnection,
+                             HTTPSConnection, HTTPException, responses)
 except ImportError:
-    from httplib import HTTPConnection, HTTPSConnection, responses, HTTPException, CannotSendRequest, BadStatusLine
+    from httplib import (BadStatusLine, CannotSendRequest, HTTPConnection,
+                         HTTPSConnection, HTTPException, responses)
 import json
+import logging
+from socket import error, gaierror, herror, timeout
 from threading import local
+import sys
 
 from jsonstream import JSONStream
 
-from .exceptions import TooManyRedirects
+from . import __package__, __version__
+from .exceptions import NetworkAddressError, RedirectionError, SocketError
 from .numbers import *
 from .uri import URI
 
@@ -34,7 +40,13 @@ default_charset = "ISO-8859-1"
 default_chunk_size = 4096
 default_max_redirects = 5
 
+log = logging.getLogger(__name__)
+
 redirects = {}
+
+user_agent = "{0}/{1} ({2}; python/{3})".format(__package__, __version__,
+                                                sys.platform,
+                                                sys.version.partition(" ")[0])
 
 
 class ConnectionPuddle(local):
@@ -139,7 +151,7 @@ class Request(object):
         self.method = method
         self.uri = uri
         self._headers = dict(headers or {})
-        self._headers.setdefault("Host", self.uri.netloc)
+        self._headers.setdefault("User-Agent", user_agent)
         self.body = body
 
     @property
@@ -173,28 +185,39 @@ class Request(object):
 
     def _submit(self, method, uri, body, headers):
         uri = URI(uri)
+        headers["Host"] = uri.netloc
         try:
             http = ConnectionPool.acquire(uri.scheme, uri.netloc)
         except KeyError:
-            raise ValueError("Unsupported URI scheme {0}".format(
-                repr(uri.scheme)))
-        try:
-            http.request(method, uri.reference, body, headers)
-            response = http.getresponse()
-        except BadStatusLine as err:
-            if err.line == repr(""):
+            raise ValueError("Unsupported URI scheme " + repr(uri.scheme))
+
+        def send(reconnect=None):
+            if reconnect:
+                log.warn("Reconnecting ({0})".format(reconnect))
                 http.close()
                 http.connect()
-                http.request(method, uri.reference, body, headers)
-                response = http.getresponse()
-            else:
-                raise
-        except IOError:
-            http.close()
-            http.connect()
+            log.info(">>> {0} <{1}> [{2}]".format(method, uri, len(body or "")))
+            for key, value in headers.items():
+                log.debug(">>> {0}: {1}".format(key, value))
             http.request(method, uri.reference, body, headers)
-            response = http.getresponse()
-        return http, response
+            return http.getresponse()
+
+        try:
+            try:
+                response = send()
+            except BadStatusLine as err:
+                if err.line == repr(""):
+                    response = send("bad status line")
+                else:
+                    raise
+            except timeout:
+                response = send("timeout")
+        except (gaierror, herror) as err:
+            raise NetworkAddressError(err.args[1], netloc=uri.netloc)
+        except error as err:
+            raise SocketError(err.args[0], netloc=uri.netloc)
+        else:
+            return http, response
 
     def submit(self, **kwargs):
         follow = kwargs.get("follow", default_max_redirects)
@@ -202,22 +225,33 @@ class Request(object):
         while uri:
             http, rs = self._submit(self.method, uri, self.body, self.headers)
             status_class = rs.status // 100
+            if rs.getheader("Transfer-Encoding") == "chunked":
+                content_length = "chunked"
+            else:
+                content_length = rs.getheader("Content-Length")
+            log.info("<<< {0} {1} [{2}]".format(rs.status, responses[rs.status],
+                                                content_length))
+            for key, value in rs.getheaders():
+                log.debug("<<< {0}: {1}".format(key, value))
             if status_class == 3:
                 if follow:
                     location = rs.getheader("Location")
+                    if location == uri:
+                        raise RedirectionError("Circular redirection")
                     if rs.status in (MOVED_PERMANENTLY, PERMANENT_REDIRECT):
                         redirects[uri] = location
                     uri = location
                     follow -= 1
                 else:
                     uri = None
+                rs.read()
             elif status_class == 4:
                 raise ClientError(http, self, rs, **kwargs)
             elif status_class == 5:
                 raise ServerError(http, self, rs, **kwargs)
             else:
                 return Response(http, self, rs, **kwargs)
-        raise TooManyRedirects()
+        raise RedirectionError("Too many redirects")
 
 
 class Response(object):

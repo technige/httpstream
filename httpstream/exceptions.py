@@ -16,11 +16,55 @@
 # limitations under the License.
 
 
+import os
 try:
     from http.client import HTTPException
 except ImportError:
     from httplib import HTTPException
+import logging
 
 
-class TooManyRedirects(HTTPException):
-    pass
+log = logging.getLogger("httpstream.http")
+
+
+class Loggable(object):
+
+    def __init__(self, cls, message):
+        log.error("{0}: {1}".format(cls.__name__, message))
+
+
+class NetworkAddressError(Loggable, IOError):
+
+    def __init__(self, message, netloc=None):
+        self._netloc = netloc
+        IOError.__init__(self, message)
+        Loggable.__init__(self, self.__class__, message)
+
+    @property
+    def netloc(self):
+        return self._netloc
+
+
+class SocketError(Loggable, IOError):
+
+    def __init__(self, code, netloc=None):
+        self._code = code
+        self._netloc = netloc
+        message = os.strerror(code)
+        IOError.__init__(self, message)
+        Loggable.__init__(self, self.__class__, message)
+
+    @property
+    def code(self):
+        return self._code
+
+    @property
+    def netloc(self):
+        return self._netloc
+
+
+class RedirectionError(Loggable, HTTPException):
+
+    def __init__(self, *args, **kwargs):
+        HTTPException.__init__(self, *args, **kwargs)
+        Loggable.__init__(self, self.__class__, args[0])
