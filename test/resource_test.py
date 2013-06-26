@@ -16,13 +16,38 @@
 # limitations under the License.
 
 
-from httpstream import Resource, NetworkAddressError
+from httpstream import Resource, NetworkAddressError, SocketError
 
 
-def test_unknown_hostname_will_fail():
+def test_bad_hostname_will_fail():
     resource = Resource("http://localtoast:6789")
     try:
         resource.get()
-        assert False
     except NetworkAddressError:
         assert True
+    else:
+        assert False
+
+
+def test_bad_port_will_fail():
+    resource = Resource("http://localhost:6789")
+    try:
+        resource.get()
+    except SocketError:
+        assert True
+    else:
+        assert False
+
+
+def test_can_get_simple_uri():
+    ddg = Resource("http://duckduckgo.com")
+    rs = ddg.get()
+    assert rs.status_code == 200
+
+
+def test_can_get_substituted_uri():
+    ddg = Resource("https://api.duckduckgo.com/?q={q}&format=json")
+    rs = ddg.get(values={"q": "neo4j"})
+    for key, value in rs:
+        print(key, value)
+    assert rs.status_code == 200

@@ -221,7 +221,13 @@ class Request(object):
 
     def submit(self, **kwargs):
         follow = kwargs.get("follow", default_max_redirects)
+        fields = kwargs.get("fields")
         uri = URI(self.uri)
+        if fields:
+            try:
+                uri = uri.format(**dict(fields))
+            except TypeError:
+                raise TypeError("Mapping required for field substitution")
         while uri:
             http, rs = self._submit(self.method, uri, self.body, self.headers)
             status_class = rs.status // 100
@@ -246,18 +252,19 @@ class Request(object):
                     uri = None
                 rs.read()
             elif status_class == 4:
-                raise ClientError(http, self, rs, **kwargs)
+                raise ClientError(http, uri, self, rs, **kwargs)
             elif status_class == 5:
-                raise ServerError(http, self, rs, **kwargs)
+                raise ServerError(http, uri, self, rs, **kwargs)
             else:
-                return Response(http, self, rs, **kwargs)
+                return Response(http, uri, self, rs, **kwargs)
         raise RedirectionError("Too many redirects")
 
 
 class Response(object):
 
-    def __init__(self, http, request, response, **kwargs):
+    def __init__(self, http, uri, request, response, **kwargs):
         self._http = http
+        self._uri = URI(uri)
         self._request = request
         self._response = response
         try:
@@ -288,6 +295,14 @@ class Response(object):
                 pass
             ConnectionPool.release(self._http)
             self._http = None
+
+    @property
+    def __uri__(self):
+        return self._uri
+
+    @property
+    def uri(self):
+        return self._uri
 
     @property
     def request(self):
@@ -366,18 +381,19 @@ class Response(object):
 
 class ClientError(Exception, Response):
 
-    def __init__(self, http, request, response, **kwargs):
+    def __init__(self, http, uri, request, response, **kwargs):
         assert response.status // 100 == 4
-        Response.__init__(self, http, request, response, **kwargs)
+        Response.__init__(self, http, uri, request, response, **kwargs)
         Exception.__init__(self, self.reason)
 
 
 class ServerError(Exception, Response):
 
-    def __init__(self, http, request, response, **kwargs):
+    def __init__(self, http, uri, request, response, **kwargs):
         assert response.status // 100 == 5
-        Response.__init__(self, http, request, response, **kwargs)
+        Response.__init__(self, http, uri, request, response, **kwargs)
         Exception.__init__(self, self.reason)
+
 
 
 class Resource(object):
