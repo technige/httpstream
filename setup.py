@@ -16,7 +16,10 @@
 # limitations under the License.
 
 
-from setuptools import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 from httpstream import (__author__, __email__, __license__, __package__,
                         __version__)
@@ -37,7 +40,6 @@ setup(
         "httpstream",
     ],
     install_requires=[
-        "distribute",
         "jsonstream",
     ],
     license=__license__,
