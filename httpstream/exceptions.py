@@ -30,7 +30,7 @@ log = logging.getLogger("httpstream.http")
 class Loggable(object):
 
     def __init__(self, cls, message):
-        log.error("{0}: {1}".format(cls.__name__, message))
+        log.error("!!! {0}: {1}".format(cls.__name__, message))
 
 
 class NetworkAddressError(Loggable, IOError):
