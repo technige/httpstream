@@ -339,7 +339,7 @@ class Response(object):
     @property
     def content_length(self):
         if not self.is_chunked:
-            return int(self._response.getheader("Content-Length"))
+            return int(self._response.getheader("Content-Length", 0))
 
     @property
     def content_type(self):
