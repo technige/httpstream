@@ -226,19 +226,19 @@ class Request(object):
 
     def submit(self, **kwargs):
         follow = kwargs.get("follow", default_max_redirects)
-        fields = kwargs.get("fields")
         query = kwargs.get("query")
         fragment = kwargs.get("fragment")
+        fields = kwargs.get("fields")
         uri = URI(self.uri)
+        if query:
+            uri.query = query
+        if fragment:
+            uri.fragment = fragment
         if fields:
             try:
                 uri = uri.format(**dict(fields))
             except TypeError:
                 raise TypeError("Mapping required for field substitution")
-        if query:
-            uri.query = query
-        if fragment:
-            uri.fragment = fragment
         while uri:
             http, rs = self._submit(self.method, uri, self.body, self.headers)
             status_class = rs.status // 100
