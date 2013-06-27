@@ -193,10 +193,15 @@ class Request(object):
 
         def send(reconnect=None):
             if reconnect:
-                log.warn("Reconnecting ({0})".format(reconnect))
+                log.warn("<~> Reconnecting ({0})".format(reconnect))
                 http.close()
                 http.connect()
-            log.info(">>> {0} <{1}> [{2}]".format(method, uri, len(body or "")))
+            if method in ("GET", "DELETE") and not body:
+                log.info(">>> {0} {1}".format(method, uri))
+            elif body:
+                log.info(">>> {0} {1} [{2}]".format(method, uri, len(body)))
+            else:
+                log.info(">>> {0} {1} [0]".format(method, uri))
             for key, value in headers.items():
                 log.debug(">>> {0}: {1}".format(key, value))
             http.request(method, uri.reference, body, headers)
@@ -222,24 +227,25 @@ class Request(object):
     def submit(self, **kwargs):
         follow = kwargs.get("follow", default_max_redirects)
         fields = kwargs.get("fields")
+        query = kwargs.get("query")
+        fragment = kwargs.get("fragment")
         uri = URI(self.uri)
         if fields:
             try:
                 uri = uri.format(**dict(fields))
             except TypeError:
                 raise TypeError("Mapping required for field substitution")
+        if query:
+            uri.query = query
+        if fragment:
+            uri.fragment = fragment
         while uri:
             http, rs = self._submit(self.method, uri, self.body, self.headers)
             status_class = rs.status // 100
-            if rs.getheader("Transfer-Encoding") == "chunked":
-                content_length = "chunked"
-            else:
-                content_length = rs.getheader("Content-Length")
-            log.info("<<< {0} {1} [{2}]".format(rs.status, responses[rs.status],
-                                                content_length))
-            for key, value in rs.getheaders():
-                log.debug("<<< {0}: {1}".format(key, value))
             if status_class == 3:
+                log.info("<<< {0} {1}".format(rs.status, responses[rs.status]))
+                for key, value in rs.getheaders():
+                    log.debug("<<< {0}: {1}".format(key, value))
                 if follow:
                     location = rs.getheader("Location")
                     if location == uri:
@@ -272,12 +278,19 @@ class Response(object):
         except KeyError:
             self._reason = None
         self._kwargs = kwargs
+        log.info("<<< {0}".format(self))
+        for key, value in self._response.getheaders():
+            log.debug("<<< {0}: {1}".format(key, value))
 
     def __del__(self):
         self._release()
 
     def __repr__(self):
-        return "{0} {1}".format(self.status_code, self.reason)
+        if self.is_chunked:
+            return "{0} {1} [chunked]".format(self.status_code, self.reason)
+        else:
+            return "{0} {1} [{2}]".format(self.status_code, self.reason,
+                                          self.content_length)
 
     def __getitem__(self, key):
         if not self._response:
@@ -324,6 +337,11 @@ class Response(object):
         return self._response.getheaders()
 
     @property
+    def content_length(self):
+        if not self.is_chunked:
+            return int(self._response.getheader("Content-Length"))
+
+    @property
     def content_type(self):
         try:
             content_type = [
@@ -344,6 +362,10 @@ class Response(object):
         except AttributeError:
             return default_charset
         return content_type.get("charset", default_charset)
+
+    @property
+    def is_chunked(self):
+        return self._response.getheader("Transfer-Encoding") == "chunked"
 
     @property
     def is_json(self):
