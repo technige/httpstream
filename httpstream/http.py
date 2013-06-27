@@ -417,7 +417,6 @@ class ServerError(Exception, Response):
         Exception.__init__(self, self.reason)
 
 
-
 class Resource(object):
 
     def __init__(self, uri, headers=None):
