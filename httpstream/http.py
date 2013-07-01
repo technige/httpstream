@@ -36,7 +36,7 @@ from .numbers import *
 from .uri import URI
 
 
-default_charset = "ISO-8859-1"
+default_encoding = "ISO-8859-1"
 default_chunk_size = 4096
 default_max_redirects = 5
 
@@ -225,15 +225,18 @@ class Request(object):
             return http, response
 
     def submit(self, **kwargs):
-        follow = kwargs.get("follow", default_max_redirects)
-        query = kwargs.get("query")
-        fragment = kwargs.get("fragment")
-        fields = kwargs.get("fields")
         uri = URI(self.uri)
-        if query:
-            uri.query = query
-        if fragment:
-            uri.fragment = fragment
+        follow = kwargs.pop("follow", default_max_redirects)
+        try:
+            uri.query = kwargs.pop("query")
+        except KeyError:
+            pass
+        try:
+            uri.fragment = kwargs.pop("fragment")
+        except KeyError:
+            pass
+        fields = kwargs.pop("fields", {})
+        fields.update(kwargs)
         if fields:
             try:
                 uri = uri.format(**dict(fields))
@@ -267,6 +270,8 @@ class Request(object):
 
 
 class Response(object):
+    """ File-like object allowing consumption of an HTTP response.
+    """
 
     def __init__(self, http, uri, request, response, **kwargs):
         self._http = http
@@ -283,7 +288,7 @@ class Response(object):
             log.debug("<<< {0}: {1}".format(key, value))
 
     def __del__(self):
-        self._release()
+        self.close()
 
     def __repr__(self):
         if self.is_chunked:
@@ -297,13 +302,24 @@ class Response(object):
             return None
         return self._response.getheader(key)
 
-    def _decode(self, data):
-        return data.decode(self.charset)
+    def __enter__(self):
+        return self
 
-    def _release(self):
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
+    def _decode(self, data):
+        return data.decode(self.encoding)
+
+    @property
+    def closed(self):
+        return not bool(self._http)
+
+    def close(self):
         if self._http:
             try:
-                self._response.read()
+                self.read()
             except HTTPException:
                 pass
             ConnectionPool.release(self._http)
@@ -353,15 +369,15 @@ class Response(object):
         return content_type[0]
 
     @property
-    def charset(self):
+    def encoding(self):
         try:
             content_type = dict(
                 _.strip().partition("=")[0::2]
                 for _ in self._response.getheader("Content-Type").split(";")
             )
         except AttributeError:
-            return default_charset
-        return content_type.get("charset", default_charset)
+            return default_encoding
+        return content_type.get("charset", default_encoding)
 
     @property
     def is_chunked(self):
@@ -372,33 +388,50 @@ class Response(object):
         return self.content_type in ("application/json",
                                      "application/x-javascript")
 
+    @property
+    def is_text(self):
+        return self.content_type.partition("/")[0] == "text"
+
+    def read(self, size=None):
+        if size is None:
+            return self._response.read()
+        else:
+            return self._response.read(size)
+
+    def iter_chunks(self, chunk_size=None):
+        if not chunk_size:
+            chunk_size = self._kwargs.get("chunk_size")
+        if chunk_size:
+            pending = []
+            data = True
+            while data:
+                data = self.read(chunk_size)
+                pending.append(data)
+                decoded = None
+                while data and not decoded:
+                    try:
+                        decoded = self._decode("".join(pending))
+                        pending = []
+                        yield decoded
+                    except UnicodeDecodeError:
+                        data = self.read(1)
+                        pending.append(data)
+        else:
+            yield self._decode(self.read())
+        self.close()
+
+    def iter_json(self):
+        return iter(JSONStream(self.iter_chunks()))
+
+    # TODO: iter_lines
+
     def __iter__(self):
-        def response_iterator(chunk_size):
-            if chunk_size:
-                pending = []
-                data = True
-                while data:
-                    data = self._response.read(chunk_size)
-                    pending.append(data)
-                    decoded = None
-                    while data and not decoded:
-                        try:
-                            decoded = self._decode("".join(pending))
-                            pending = []
-                            yield decoded
-                        except UnicodeDecodeError:
-                            data = self._response.read(1)
-                            pending.append(data)
-            else:
-                yield self._decode(self._response.read())
-            self._release()
-        iterator = response_iterator(self._kwargs.get("chunk_size"))
         if self.status_code == NO_CONTENT:
             return iter([])
         elif self.is_json:
-            return iter(JSONStream(iterator))
+            return self.iter_json()
         else:
-            return iterator
+            return self.iter_chunks()
 
 
 class ClientError(Exception, Response):
