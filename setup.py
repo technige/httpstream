@@ -40,7 +40,6 @@ setup(
         "httpstream",
     ],
     install_requires=[
-        "jsonstream",
     ],
     license=__license__,
     classifiers=[

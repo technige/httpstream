@@ -43,6 +43,23 @@ class URI(object):
         else:
             return URI("/".join(parts))
 
+    @classmethod
+    def resolve(cls, uri, location):
+        location = URI(location)
+        if location.scheme or location.netloc:
+            return location
+        uri = URI(uri)
+        if location.path.startswith("/"):
+            uri.path = location.path
+        elif uri.path.endswith("/"):
+            uri.path += location.path
+        else:
+            uri.path = "".join(uri.path.rpartition("/")[0:2]) + location.path
+        uri.params = location.params
+        uri.query = location.query
+        uri.fragment = location.fragment
+        return uri
+
     def __init__(self, uri):
         try:
             parsed = urlparse(str(uri.__uri__))

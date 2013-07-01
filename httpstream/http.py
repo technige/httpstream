@@ -242,31 +242,28 @@ class Request(object):
                 uri = uri.format(**dict(fields))
             except TypeError:
                 raise TypeError("Mapping required for field substitution")
-        while uri:
+        while True:
             http, rs = self._submit(self.method, uri, self.body, self.headers)
             status_class = rs.status // 100
             if status_class == 3:
-                log.info("<<< {0} {1}".format(rs.status, responses[rs.status]))
-                for key, value in rs.getheaders():
-                    log.debug("<<< {0}: {1}".format(key, value))
+                redirection = Redirection(http, uri, self, rs, **kwargs)
                 if follow:
-                    location = rs.getheader("Location")
+                    follow -= 1
+                    location = URI.resolve(uri, rs.getheader("Location"))
                     if location == uri:
                         raise RedirectionError("Circular redirection")
                     if rs.status in (MOVED_PERMANENTLY, PERMANENT_REDIRECT):
                         redirects[uri] = location
                     uri = location
-                    follow -= 1
+                    redirection.close()
                 else:
-                    uri = None
-                rs.read()
+                    return redirection
             elif status_class == 4:
                 raise ClientError(http, uri, self, rs, **kwargs)
             elif status_class == 5:
                 raise ServerError(http, uri, self, rs, **kwargs)
             else:
                 return Response(http, uri, self, rs, **kwargs)
-        raise RedirectionError("Too many redirects")
 
 
 class Response(object):
@@ -282,7 +279,7 @@ class Response(object):
             self._reason = kwargs.pop("reason")
         except KeyError:
             self._reason = None
-        self._kwargs = kwargs
+        self.chunk_size = kwargs.get("chunk_size", default_chunk_size)
         log.info("<<< {0}".format(self))
         for key, value in self._response.getheaders():
             log.debug("<<< {0}: {1}".format(key, value))
@@ -319,7 +316,7 @@ class Response(object):
     def close(self):
         if self._http:
             try:
-                self.read()
+                self._response.read()
             except HTTPException:
                 pass
             ConnectionPool.release(self._http)
@@ -394,44 +391,75 @@ class Response(object):
 
     def read(self, size=None):
         if size is None:
-            return self._response.read()
+            data = self._response.read()
+            self.close()
         else:
-            return self._response.read(size)
+            data = self._response.read(size)
+            if size and not data:
+                self.close()
+        return data
 
     def iter_chunks(self, chunk_size=None):
         if not chunk_size:
-            chunk_size = self._kwargs.get("chunk_size")
-        if chunk_size:
-            pending = []
-            data = True
-            while data:
-                data = self.read(chunk_size)
-                pending.append(data)
-                decoded = None
-                while data and not decoded:
-                    try:
-                        decoded = self._decode("".join(pending))
-                        pending = []
-                        yield decoded
-                    except UnicodeDecodeError:
-                        data = self.read(1)
-                        pending.append(data)
-        else:
-            yield self._decode(self.read())
+            chunk_size = self.chunk_size
+        pending = []
+        data = True
+        while data:
+            data = self.read(chunk_size)
+            pending.append(data)
+            decoded = None
+            while data and not decoded:
+                try:
+                    decoded = self._decode("".join(pending))
+                    pending = []
+                    yield decoded
+                except UnicodeDecodeError:
+                    data = self.read(1)
+                    pending.append(data)
         self.close()
 
     def iter_json(self):
         return iter(JSONStream(self.iter_chunks()))
 
-    # TODO: iter_lines
+    def iter_lines(self, keep_ends=False):
+        data = ""
+        for chunk in self.iter_chunks():
+            data += chunk
+            while "\r" in data or "\n" in data:
+                cr, lf = data.find("\r"), data.find("\n")
+                if cr >= 0 and lf == cr + 1:
+                    eol_pos, eol_len = cr, 2
+                else:
+                    if cr >= 0 and lf >= 0:
+                        eol_pos = min(cr, lf)
+                    else:
+                        eol_pos = cr if cr >= 0 else lf
+                    eol_len = 1
+                x = eol_pos + eol_len
+                if keep_ends:
+                    line, data = data[:x], data[x:]
+                else:
+                    line, data = data[:eol_pos], data[x:]
+                yield line
+        if data:
+            yield data
 
     def __iter__(self):
         if self.status_code == NO_CONTENT:
             return iter([])
         elif self.is_json:
             return self.iter_json()
+        elif self.is_text:
+            return self.iter_lines()
         else:
             return self.iter_chunks()
+
+
+class Redirection(Response):
+
+    def __init__(self, http, uri, request, response, **kwargs):
+        assert response.status // 100 == 3
+        Response.__init__(self, http, uri, request, response, **kwargs)
 
 
 class ClientError(Exception, Response):
