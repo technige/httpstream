@@ -406,7 +406,7 @@ class Response(object):
             decoded = None
             while data and not decoded:
                 try:
-                    decoded = self._decode("".join(pending))
+                    decoded = "".join(self._decode(item) for item in pending)
                     pending = []
                     yield decoded
                 except UnicodeDecodeError:
