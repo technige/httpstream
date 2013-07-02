@@ -274,10 +274,7 @@ class Response(object):
         self._uri = URI(uri)
         self._request = request
         self._response = response
-        try:
-            self._reason = kwargs.pop("reason")
-        except KeyError:
-            self._reason = None
+        self._reason = kwargs.get("reason")
         self.chunk_size = kwargs.get("chunk_size", default_chunk_size)
         log.info("<<< {0}".format(self))
         for key, value in self._response.getheaders():
