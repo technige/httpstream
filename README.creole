@@ -1,7 +1,23 @@
-HTTPStream
-==========
+= HTTPStream
 
-```python
+HTTPStream is an HTTP client library for Python that is designed to allow
+incremental receipt and handling of web content as opposed to full document
+retrieval. Additionally, large JSON documents may be parsed incrementally and
+recombined into a series of smaller objects and arrays as required.
+
+== Installation
+
+HTTPStream is hosted on PyPI and so to install, simply use pip:
+
+{{{
+pip install httpstream
+}}}
+
+No external dependencies are required, the entire package is self-contained.
+
+== Usage
+
+{{{
 >>> from httpstream import Resource
 >>> ddg = Resource("https://api.duckduckgo.com/?q=neo4j&format=json")
 >>> for key, value in ddg.get():
@@ -79,7 +95,7 @@ HTTPStream
 (u'Results', 0, u'FirstURL') http://neo4j.org
 (u'Results', 0, u'Text') Official site
 (u'AbstractURL',) https://en.wikipedia.org/wiki/Neo4j
->>> from jsonstream import assembled
+>>> from httpstream.json import assembled
 >>> assembled(ddg.get())
 {u'Abstract': u'Neo4j is an open-source graph database, implemented in Java.',
  u'AbstractSource': u'Wikipedia',
@@ -124,4 +140,4 @@ HTTPStream
    u'Result': u'<a href="http://neo4j.org"><b>Official site</b></a><a href="http://neo4j.org"></a>',
    u'Text': u'Official site'}],
  u'Type': u'A'}
-```
+}}}

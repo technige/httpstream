@@ -16,6 +16,14 @@
 # limitations under the License.
 
 
+"""
+HTTPStream is an HTTP client library for Python that is designed to allow
+incremental receipt and handling of web content as opposed to full document
+retrieval. Additionally, large JSON documents may be parsed incrementally and
+recombined into a series of smaller objects and arrays as required.
+"""
+
+
 try:
     from setuptools import setup
 except ImportError:
@@ -29,10 +37,7 @@ setup(
     name=__package__,
     version=__version__,
     description="Stream based HTTP client",
-    long_description="HTTPStream is a HTTP client library for Python which is "
-                     "designed around iterable, streaming content that can "
-                     "be consumed as it is received. It uses jsonstream to "
-                     "allow large JSON documents to be decoded incrementally.",
+    long_description=__doc__,
     author=__author__,
     author_email=__email__,
     url="https://github.com/nigelsmall/httpstream",

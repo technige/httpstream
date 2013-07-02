@@ -19,14 +19,6 @@
 """
 
 
-__author__ = "Nigel Small"
-__copyright__ = "2012-2013, Nigel Small"
-__email__ = "nigel@nigelsmall.com"
-__license__ = "Apache License, Version 2.0"
-__package__ = None
-__version__ = "0.9.2"
-
-
 from .exceptions import AwaitingData, EndOfStream, UnexpectedCharacter
 from .jsonstream import JSONStream, Tokeniser
 from .util import assembled, grouped
