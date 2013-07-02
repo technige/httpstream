@@ -80,3 +80,4 @@ textual content as it is received::
 
     >>> for line in res.get():
     ...     print line
+
