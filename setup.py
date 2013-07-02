@@ -43,6 +43,7 @@ setup(
     url="https://github.com/nigelsmall/httpstream",
     packages=[
         "httpstream",
+        "httpstream.json",
     ],
     install_requires=[
     ],
