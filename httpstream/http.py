@@ -28,7 +28,7 @@ from socket import error, gaierror, herror, timeout
 from threading import local
 import sys
 
-from jsonstream import JSONStream
+from .packages.jsonstream import JSONStream
 
 from . import __package__, __version__
 from .exceptions import NetworkAddressError, RedirectionError, SocketError

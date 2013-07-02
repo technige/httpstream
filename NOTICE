@@ -1,5 +1,8 @@
-httpstream
+HTTPStream
 Copyright 2013, Nigel Small
 
 This product includes software developed by
+Nigel Small <nigel@nigelsmall.com>.
+
+Streaming JSON support is provided by the JSONStream library, also developed by
 Nigel Small <nigel@nigelsmall.com>.
