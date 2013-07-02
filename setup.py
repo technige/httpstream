@@ -18,9 +18,7 @@
 
 """
 HTTPStream is an HTTP client library for Python that is designed to allow
-incremental receipt and handling of web content as opposed to full document
-retrieval. Additionally, large JSON documents may be parsed incrementally and
-recombined into a series of smaller objects and arrays as required.
+incremental receipt and handling of web content.
 """
 
 
@@ -36,8 +34,8 @@ from httpstream import (__author__, __email__, __license__, __package__,
 setup(
     name=__package__,
     version=__version__,
-    description="Stream based HTTP client",
-    long_description=__doc__,
+    description=__doc__,
+    long_description=open("README.rst").read(),
     author=__author__,
     author_email=__email__,
     url="https://github.com/nigelsmall/httpstream",
