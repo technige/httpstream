@@ -54,7 +54,7 @@ def test_can_get_simple_text_resource():
     resource = Resource("http://localhost:8080/hello")
     response = resource.get()
     assert response.is_text
-    content = response.read()
+    content = response.read().decode(response.encoding)
     assert content == "hello, world"
 
 
@@ -62,7 +62,7 @@ def test_can_put_simple_text_resource():
     resource = Resource("http://localhost:8080/hello")
     response = resource.put("fred")
     assert response.is_text
-    content = response.read()
+    content = response.read().decode("utf-8")
     assert content == "hello, fred"
 
 
@@ -70,7 +70,7 @@ def test_can_post_simple_text_resource():
     resource = Resource("http://localhost:8080/hello")
     response = resource.post("fred")
     assert response.is_text
-    content = response.read()
+    content = response.read().decode(response.encoding)
     assert content == "hello, world and fred"
 
 
@@ -78,7 +78,7 @@ def test_can_delete_simple_text_resource():
     resource = Resource("http://localhost:8080/hello")
     response = resource.delete()
     assert response.is_text
-    content = response.read()
+    content = response.read().decode(response.encoding)
     assert content == "goodbye, cruel world"
 
 
@@ -86,7 +86,7 @@ def test_can_send_header():
     resource = Resource("http://localhost:8080/hello")
     response = resource.put("fred", headers={"X-Upper-Case": True})
     assert response.is_text
-    content = response.read()
+    content = response.read().decode(response.encoding)
     assert content == "HELLO, FRED"
 
 

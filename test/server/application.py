@@ -60,7 +60,7 @@ def get_hello():
 
 @put('/hello')
 def put_hello():
-    name = request.body.read()
+    name = request.body.read().decode("utf-8")
     message = "hello, " + name
     if request.headers.get("X-Upper-Case"):
         return message.upper()
@@ -70,7 +70,7 @@ def put_hello():
 
 @post('/hello')
 def post_hello():
-    name = request.body.read()
+    name = request.body.read().decode("utf-8")
     return "hello, world and " + name
 
 
