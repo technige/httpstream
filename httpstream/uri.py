@@ -24,9 +24,13 @@ except ImportError:
 
 
 class URI(object):
+    """ A Uniform Resource Identifier such as an HTTP URL.
+    """
 
     @classmethod
     def join(cls, *parts, **kwargs):
+        """ Form a new URI from separate parts.
+        """
         if len(parts) >= 2:
             parts = list(str(part) for part in parts)
             plus = kwargs.get("plus", False)
@@ -45,6 +49,8 @@ class URI(object):
 
     @classmethod
     def resolve(cls, uri, location):
+        """ Resolve a location relative to a base URI.
+        """
         location = URI(location)
         if location.scheme or location.netloc:
             return location
@@ -115,6 +121,8 @@ class URI(object):
         return "".join(ref)
 
     def format(self, *args, **kwargs):
+        """ Substitute values into a template URI.
+        """
         return URI(self.__uri__.format(
             *[quote(arg, safe="") for arg in args],
             **dict(

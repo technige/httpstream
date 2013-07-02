@@ -30,7 +30,7 @@ import sys
 
 from . import __package__, __version__
 from .exceptions import NetworkAddressError, RedirectionError, SocketError
-from .json import JSONStream
+from .jsonstream import JSONStream
 from .numbers import *
 from .uri import URI
 
