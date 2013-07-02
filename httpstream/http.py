@@ -386,33 +386,39 @@ class Response(object):
         return self.content_type.partition("/")[0] == "text"
 
     def read(self, size=None):
-        if size is None:
-            data = self._response.read()
-            self.close()
-        else:
-            data = self._response.read(size)
-            if size and not data:
+        completed = False
+        try:
+            if size is None:
+                data = self._response.read()
+                completed = True
+            else:
+                data = self._response.read(size)
+                completed = bool(size and not data)
+            return data
+        finally:
+            if completed:
                 self.close()
-        return data
 
     def iter_chunks(self, chunk_size=None):
-        if not chunk_size:
-            chunk_size = self.chunk_size
-        pending = []
-        data = True
-        while data:
-            data = self.read(chunk_size)
-            pending.append(data)
-            decoded = None
-            while data and not decoded:
-                try:
-                    decoded = "".join(self._decode(item) for item in pending)
-                    pending = []
-                    yield decoded
-                except UnicodeDecodeError:
-                    data = self.read(1)
-                    pending.append(data)
-        self.close()
+        try:
+            if not chunk_size:
+                chunk_size = self.chunk_size
+            pending = []
+            data = True
+            while data:
+                data = self.read(chunk_size)
+                pending.append(data)
+                decoded = None
+                while data and not decoded:
+                    try:
+                        decoded = "".join(self._decode(item) for item in pending)
+                        pending = []
+                        yield decoded
+                    except UnicodeDecodeError:
+                        data = self.read(1)
+                        pending.append(data)
+        finally:
+            self.close()
 
     def iter_json(self):
         return iter(JSONStream(self.iter_chunks()))
