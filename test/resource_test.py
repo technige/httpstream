@@ -23,8 +23,9 @@ def test_bad_hostname_will_fail():
     resource = Resource("http://localtoast:6789")
     try:
         resource.get()
-    except NetworkAddressError:
+    except NetworkAddressError as err:
         assert True
+        assert err.netloc == "localtoast:6789"
     else:
         assert False
 
@@ -33,8 +34,10 @@ def test_bad_port_will_fail():
     resource = Resource("http://localhost:6789")
     try:
         resource.get()
-    except SocketError:
+    except SocketError as err:
         assert True
+        assert err.code == 111
+        assert err.netloc == "localhost:6789"
     else:
         assert False
 
@@ -47,7 +50,7 @@ def test_can_get_simple_uri():
 
 def test_can_get_substituted_uri():
     ddg = Resource("https://api.duckduckgo.com/?q={q}&format=json")
-    rs = ddg.get(values={"q": "neo4j"})
+    rs = ddg.get(q="neo4j")
     for key, value in rs:
         print(key, value)
     assert rs.status_code == 200

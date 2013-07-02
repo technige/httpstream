@@ -235,7 +235,6 @@ class Request(object):
         except KeyError:
             pass
         fields = kwargs.pop("fields", {})
-        fields.update(kwargs)
         if fields:
             try:
                 uri = uri.format(**dict(fields))
