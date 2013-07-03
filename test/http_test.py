@@ -140,3 +140,13 @@ def test_infinity_is_detected():
         assert True
     else:
         assert False
+
+
+def test_can_set_product_in_user_agent():
+    test_product = ("FooBar", "1.2.3")
+    resource = Resource("http://localhost:8080/user_agent")
+    with resource.get(product=test_product) as response:
+        assert response.is_text
+        bits = response.read().split()
+        received_product = tuple(bits[0].split("/"))
+        assert received_product == test_product

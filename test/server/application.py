@@ -106,5 +106,10 @@ def infinity():
     redirect("/infinity")
 
 
+@get('/user_agent')
+def user_agent():
+    return request.headers.get("User-Agent")
+
+
 if __name__ == "__main__":
     run(host='localhost', port=8080)

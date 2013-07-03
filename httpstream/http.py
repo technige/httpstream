@@ -16,7 +16,6 @@
 # limitations under the License.
 
 
-import errno
 try:
     from http.client import (BadStatusLine, CannotSendRequest, HTTPConnection,
                              HTTPSConnection, HTTPException, responses)
@@ -44,23 +43,18 @@ log = logging.getLogger(__name__)
 
 redirects = {}
 
-_product = None
 
-
-def set_product(name, version):
-    global _product
-    _product = (name, version)
-
-
-def get_user_agent():
-    global _product
-    user_agent = []
-    if _product:
-        user_agent.append("/".join(_product))
-    user_agent.append("HTTPStream/{0}".format(__version__))
-    user_agent.append("Python/{0}.{1}.{2}-{3}".format(*sys.version_info[0:4]))
-    user_agent.append("({0})".format(sys.platform))
-    return " ".join(user_agent)
+def user_agent(product=None):
+    ua = []
+    if product:
+        if isinstance(product, (tuple, list)):
+            ua.append("/".join(map(str, product)))
+        else:
+            ua.append(str(product))
+    ua.append("HTTPStream/{0}".format(__version__))
+    ua.append("Python/{0}.{1}.{2}-{3}".format(*sys.version_info[0:4]))
+    ua.append("({0})".format(sys.platform))
+    return " ".join(ua)
 
 
 class ConnectionPuddle(local):
@@ -165,7 +159,6 @@ class Request(object):
         self.method = method
         self.uri = uri
         self._headers = dict(headers or {})
-        self._headers.setdefault("User-Agent", get_user_agent())
         self.body = body
 
     @property
@@ -238,12 +231,12 @@ class Request(object):
                 code = err.args[0][0]
             else:
                 code = err.args[0]
-            if code == errno.ENOENT:
+            if code == 2:
                 # Workaround for Linux bug with incorrect error message on
                 # host resolution
                 # ----
                 # https://bugs.launchpad.net/ubuntu/+source/eglibc/+bug/1154599
-                raise NetworkAddressError("Cannot connect to host",  # TODO: check this textual message is accurate
+                raise NetworkAddressError("Name or service not known",
                                           netloc=uri.netloc)
             else:
                 raise SocketError(code, netloc=uri.netloc)
@@ -253,6 +246,7 @@ class Request(object):
     def submit(self, **kwargs):
         uri = URI(self.uri)
         follow = kwargs.pop("follow", default_max_redirects)
+        product = kwargs.pop("product", None)
         try:
             uri.query = kwargs.pop("query")
         except KeyError:
@@ -267,8 +261,10 @@ class Request(object):
                 uri = uri.format(**dict(fields))
             except TypeError:
                 raise TypeError("Mapping required for field substitution")
+        headers = dict(self.headers)
+        headers.setdefault("User-Agent", user_agent(product))
         while True:
-            http, rs = self._submit(self.method, uri, self.body, self.headers)
+            http, rs = self._submit(self.method, uri, self.body, headers)
             status_class = rs.status // 100
             if status_class == 3:
                 redirection = Redirection(http, uri, self, rs, **kwargs)
@@ -437,7 +433,7 @@ class Response(object):
                 decoded = None
                 while data and not decoded:
                     try:
-                        decoded = "".join(self._decode(item) for item in pending)
+                        decoded = "".join(map(self._decode, pending))
                         pending = []
                         yield decoded
                     except UnicodeDecodeError:
