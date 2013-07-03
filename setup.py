@@ -27,12 +27,11 @@ try:
 except ImportError:
     from distutils.core import setup
 
-from httpstream import (__author__, __email__, __license__, __package__,
-                        __version__)
+from httpstream import __author__, __email__, __license__, __version__
 
 
 setup(
-    name=__package__,
+    name="httpstream",
     version=__version__,
     description=__doc__,
     long_description=open("README.rst").read(),
