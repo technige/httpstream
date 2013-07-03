@@ -109,3 +109,18 @@ class URIFormatTestCase(TestCase):
         formatted = uri.format(bar="knife & fork & spoon")
         assert formatted == "http://localhost:7474/foo/" \
                             "knife%20%26%20fork%20%26%20spoon"
+
+
+def test_can_resolve_uris_correctly():
+    uri = URI.resolve("http://example.com/foo", "http://example.com/bar")
+    assert uri == "http://example.com/bar"
+    uri = URI.resolve("http://example.com/foo/", "http://example.com/bar")
+    assert uri == "http://example.com/bar"
+    uri = URI.resolve("http://example.com/foo", "/bar")
+    assert uri == "http://example.com/bar"
+    uri = URI.resolve("http://example.com/foo/", "/bar")
+    assert uri == "http://example.com/bar"
+    uri = URI.resolve("http://example.com/foo", "bar")
+    assert uri == "http://example.com/bar"
+    uri = URI.resolve("http://example.com/foo/", "bar")
+    assert uri == "http://example.com/foo/bar"
