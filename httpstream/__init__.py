@@ -28,6 +28,5 @@ __license__ = "Apache License, Version 2.0"
 __version__ = "0.9.6"
 
 
-from .exceptions import *
-from .http import Resource, Request, Response, ClientError, ServerError
+from .http import *
 from .uri import URI

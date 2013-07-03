@@ -24,15 +24,19 @@ except ImportError:
                          HTTPSConnection, HTTPException, responses)
 import json
 import logging
+import os
 from socket import error, gaierror, herror, timeout
 from threading import local
 import sys
 
 from . import __version__
-from .exceptions import NetworkAddressError, RedirectionError, SocketError
 from .jsonstream import JSONStream
 from .numbers import *
 from .uri import URI
+
+
+__all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
+           "Response", "Redirection", "ClientError", "ServerError", "Resource"]
 
 
 default_encoding = "ISO-8859-1"
@@ -55,6 +59,49 @@ def user_agent(product=None):
     ua.append("Python/{0}.{1}.{2}-{3}".format(*sys.version_info[0:4]))
     ua.append("({0})".format(sys.platform))
     return " ".join(ua)
+
+
+class Loggable(object):
+
+    def __init__(self, cls, message):
+        log.error("!!! {0}: {1}".format(cls.__name__, message))
+
+
+class NetworkAddressError(Loggable, IOError):
+
+    def __init__(self, message, netloc=None):
+        self._netloc = netloc
+        IOError.__init__(self, message)
+        Loggable.__init__(self, self.__class__, message)
+
+    @property
+    def netloc(self):
+        return self._netloc
+
+
+class SocketError(Loggable, IOError):
+
+    def __init__(self, code, netloc=None):
+        self._code = code
+        self._netloc = netloc
+        message = os.strerror(code)
+        IOError.__init__(self, message)
+        Loggable.__init__(self, self.__class__, message)
+
+    @property
+    def code(self):
+        return self._code
+
+    @property
+    def netloc(self):
+        return self._netloc
+
+
+class RedirectionError(Loggable, HTTPException):
+
+    def __init__(self, *args, **kwargs):
+        HTTPException.__init__(self, *args, **kwargs)
+        Loggable.__init__(self, self.__class__, args[0])
 
 
 class ConnectionPuddle(local):
