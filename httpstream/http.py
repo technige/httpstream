@@ -192,7 +192,8 @@ class ConnectionPool(object):
         elif isinstance(connection, HTTPConnection):
             schema = "http"
         else:
-            raise TypeError("Unknown connection type " + repr(connection.__class__))
+            raise TypeError("Unknown connection type " +
+                            repr(connection.__class__))
         puddle = cls._get_puddle(schema, "{0}:{1}".format(
             connection.host, connection.port))
         puddle.release(connection)
