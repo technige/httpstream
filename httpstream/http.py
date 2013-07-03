@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+import errno
 try:
     from http.client import (BadStatusLine, CannotSendRequest, HTTPConnection,
                              HTTPSConnection, HTTPException, responses)
@@ -233,7 +234,19 @@ class Request(object):
         except (gaierror, herror) as err:
             raise NetworkAddressError(err.args[1], netloc=uri.netloc)
         except error as err:
-            raise SocketError(err.args[0], netloc=uri.netloc)
+            if isinstance(err.args[0], tuple):
+                code = err.args[0][0]
+            else:
+                code = err.args[0]
+            if code == errno.ENOENT:
+                # Workaround for Linux bug with incorrect error message on
+                # host resolution
+                # ----
+                # https://bugs.launchpad.net/ubuntu/+source/eglibc/+bug/1154599
+                raise NetworkAddressError("Cannot connect to host",  # TODO: check this textual message is accurate
+                                          netloc=uri.netloc)
+            else:
+                raise SocketError(code, netloc=uri.netloc)
         else:
             return http, response
 
