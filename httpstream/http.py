@@ -28,7 +28,7 @@ from socket import error, gaierror, herror, timeout
 from threading import local
 import sys
 
-from . import __package__, __version__
+from . import __version__
 from .exceptions import NetworkAddressError, RedirectionError, SocketError
 from .jsonstream import JSONStream
 from .numbers import *
@@ -43,9 +43,23 @@ log = logging.getLogger(__name__)
 
 redirects = {}
 
-user_agent = "{0}/{1} ({2}; python/{3})".format(__package__, __version__,
-                                                sys.platform,
-                                                sys.version.partition(" ")[0])
+_product = None
+
+
+def set_product(name, version):
+    global _product
+    _product = (name, version)
+
+
+def get_user_agent():
+    global _product
+    user_agent = []
+    if _product:
+        user_agent.append("/".join(_product))
+    user_agent.append("HTTPStream/{0}".format(__version__))
+    user_agent.append("Python/{0}.{1}.{2}-{3}".format(*sys.version_info[0:4]))
+    user_agent.append("({0})".format(sys.platform))
+    return " ".join(user_agent)
 
 
 class ConnectionPuddle(local):
@@ -150,7 +164,7 @@ class Request(object):
         self.method = method
         self.uri = uri
         self._headers = dict(headers or {})
-        self._headers.setdefault("User-Agent", user_agent)
+        self._headers.setdefault("User-Agent", get_user_agent())
         self.body = body
 
     @property
