@@ -55,7 +55,7 @@ def user_agent(product=None):
         else:
             ua.append(str(product))
     ua.append("HTTPStream/{0}".format(__version__))
-    ua.append("Python/{0}.{1}.{2}-{3}".format(*sys.version_info[0:4]))
+    ua.append("Python/{0}.{1}.{2}-{3}-{4}".format(*sys.version_info))
     ua.append("({0})".format(sys.platform))
     return " ".join(ua)
 
