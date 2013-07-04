@@ -18,10 +18,10 @@
 
 try:
     from http.client import (BadStatusLine, CannotSendRequest, HTTPConnection,
-                             HTTPSConnection, HTTPException, responses)
+                             HTTPSConnection, HTTPException, responses, ResponseNotReady)
 except ImportError:
     from httplib import (BadStatusLine, CannotSendRequest, HTTPConnection,
-                         HTTPSConnection, HTTPException, responses)
+                         HTTPSConnection, HTTPException, responses, ResponseNotReady)
 import json
 import logging
 import os
@@ -232,6 +232,8 @@ def submit(method, uri, body, headers):
                 response = send("bad status line")
             else:
                 raise
+        except ResponseNotReady:
+            response = send("response not ready")
         except timeout:
             response = send("timeout")
     except (gaierror, herror) as err:
