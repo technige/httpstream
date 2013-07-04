@@ -101,6 +101,16 @@ def person(name=None):
         return PEOPLE
 
 
+@get('/old')
+def old():
+    redirect("/new")
+
+
+@get('/new')
+def new():
+    return "You arrived!"
+
+
 @get('/infinity')
 def infinity():
     redirect("/infinity")

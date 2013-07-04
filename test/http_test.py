@@ -18,6 +18,7 @@
 
 from httpstream import Resource, RedirectionError
 from httpstream.jsonstream import assembled, grouped
+from httpstream.numbers import *
 
 
 LOREM_IPSUM = """\
@@ -130,6 +131,13 @@ def test_can_use_resource_with_template_uri():
         with resource.get(fields={"name": name}) as response:
             assert response.is_json
             assert assembled(response) == PEOPLE[name]
+
+
+def test_can_follow_simple_redirect():
+    resource = Resource("http://localhost:8080/old")
+    with resource.get() as response:
+        assert response.status_code == OK
+        assert response.uri == "http://localhost:8080/new"
 
 
 def test_infinity_is_detected():

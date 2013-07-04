@@ -41,7 +41,6 @@ __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
 
 default_encoding = "ISO-8859-1"
 default_chunk_size = 4096
-default_max_redirects = 5
 
 log = logging.getLogger(__name__)
 
@@ -199,6 +198,62 @@ class ConnectionPool(object):
         puddle.release(connection)
 
 
+def submit(method, uri, body, headers):
+    """ Submit one HTTP request.
+    """
+    uri = URI(uri)
+    headers["Host"] = uri.netloc
+    try:
+        http = ConnectionPool.acquire(uri.scheme, uri.netloc)
+    except KeyError:
+        raise ValueError("Unsupported URI scheme " + repr(uri.scheme))
+
+    def send(reconnect=None):
+        if reconnect:
+            log.warn("<~> Reconnecting ({0})".format(reconnect))
+            http.close()
+            http.connect()
+        if method in ("GET", "DELETE") and not body:
+            log.info(">>> {0} {1}".format(method, uri))
+        elif body:
+            log.info(">>> {0} {1} [{2}]".format(method, uri, len(body)))
+        else:
+            log.info(">>> {0} {1} [0]".format(method, uri))
+        for key, value in headers.items():
+            log.debug(">>> {0}: {1}".format(key, value))
+        http.request(method, uri.reference, body, headers)
+        return http.getresponse()
+
+    try:
+        try:
+            response = send()
+        except BadStatusLine as err:
+            if err.line == repr(""):
+                response = send("bad status line")
+            else:
+                raise
+        except timeout:
+            response = send("timeout")
+    except (gaierror, herror) as err:
+        raise NetworkAddressError(err.args[1], netloc=uri.netloc)
+    except error as err:
+        if isinstance(err.args[0], tuple):
+            code = err.args[0][0]
+        else:
+            code = err.args[0]
+        if code == 2:
+            # Workaround for Linux bug with incorrect error message on
+            # host resolution
+            # ----
+            # https://bugs.launchpad.net/ubuntu/+source/eglibc/+bug/1154599
+            raise NetworkAddressError("Name or service not known",
+                                      netloc=uri.netloc)
+        else:
+            raise SocketError(code, netloc=uri.netloc)
+    else:
+        return http, response
+
+
 class Request(object):
 
     def __init__(self, method, uri, body=None, headers=None):
@@ -238,86 +293,25 @@ class Request(object):
             self._headers.setdefault("Content-Type", "application/json")
         return self._headers
 
-    def _submit(self, method, uri, body, headers):
-        uri = URI(uri)
-        headers["Host"] = uri.netloc
-        try:
-            http = ConnectionPool.acquire(uri.scheme, uri.netloc)
-        except KeyError:
-            raise ValueError("Unsupported URI scheme " + repr(uri.scheme))
-
-        def send(reconnect=None):
-            if reconnect:
-                log.warn("<~> Reconnecting ({0})".format(reconnect))
-                http.close()
-                http.connect()
-            if method in ("GET", "DELETE") and not body:
-                log.info(">>> {0} {1}".format(method, uri))
-            elif body:
-                log.info(">>> {0} {1} [{2}]".format(method, uri, len(body)))
-            else:
-                log.info(">>> {0} {1} [0]".format(method, uri))
-            for key, value in headers.items():
-                log.debug(">>> {0}: {1}".format(key, value))
-            http.request(method, uri.reference, body, headers)
-            return http.getresponse()
-
-        try:
-            try:
-                response = send()
-            except BadStatusLine as err:
-                if err.line == repr(""):
-                    response = send("bad status line")
-                else:
-                    raise
-            except timeout:
-                response = send("timeout")
-        except (gaierror, herror) as err:
-            raise NetworkAddressError(err.args[1], netloc=uri.netloc)
-        except error as err:
-            if isinstance(err.args[0], tuple):
-                code = err.args[0][0]
-            else:
-                code = err.args[0]
-            if code == 2:
-                # Workaround for Linux bug with incorrect error message on
-                # host resolution
-                # ----
-                # https://bugs.launchpad.net/ubuntu/+source/eglibc/+bug/1154599
-                raise NetworkAddressError("Name or service not known",
-                                          netloc=uri.netloc)
-            else:
-                raise SocketError(code, netloc=uri.netloc)
-        else:
-            return http, response
-
-    def submit(self, **kwargs):
+    def submit(self, redirect_limit, query=None, fragment=None, fields=None,
+               product=None, **response_kwargs):
         uri = URI(self.uri)
-        follow = kwargs.pop("follow", default_max_redirects)
-        product = kwargs.pop("product", None)
-        try:
-            uri.query = kwargs.pop("query")
-        except KeyError:
-            pass
-        try:
-            uri.fragment = kwargs.pop("fragment")
-        except KeyError:
-            pass
-        fields = kwargs.pop("fields", {})
+        if query is not None:
+            uri.query = query
+        if fragment is not None:
+            uri.fragment = fragment
         if fields:
-            try:
-                uri = uri.format(**dict(fields))
-            except TypeError:
-                raise TypeError("Mapping required for field substitution")
+            uri = uri.format(**dict(fields))
         headers = dict(self.headers)
         headers.setdefault("User-Agent", user_agent(product))
         while True:
-            http, rs = self._submit(self.method, uri, self.body, headers)
+            http, rs = submit(self.method, uri, self.body, headers)
             status_class = rs.status // 100
             if status_class == 3:
-                redirection = Redirection(http, uri, self, rs, **kwargs)
-                if follow:
-                    follow -= 1
+                redirection = Redirection(http, uri, self, rs,
+                                          **response_kwargs)
+                if redirect_limit:
+                    redirect_limit -= 1
                     location = URI.resolve(uri, rs.getheader("Location"))
                     if location == uri:
                         raise RedirectionError("Circular redirection")
@@ -328,11 +322,11 @@ class Request(object):
                 else:
                     return redirection
             elif status_class == 4:
-                raise ClientError(http, uri, self, rs, **kwargs)
+                raise ClientError(http, uri, self, rs, **response_kwargs)
             elif status_class == 5:
-                raise ServerError(http, uri, self, rs, **kwargs)
+                raise ServerError(http, uri, self, rs, **response_kwargs)
             else:
-                return Response(http, uri, self, rs, **kwargs)
+                return Response(http, uri, self, rs, **response_kwargs)
 
 
 class Response(object):
@@ -552,15 +546,11 @@ class ServerError(Exception, Response):
 
 class Resource(object):
 
-    def __init__(self, uri, headers=None):
+    def __init__(self, uri):
         if uri:
             self._uri = str(uri)
         else:
             self._uri = None
-        if headers:
-            self._headers = dict(headers)
-        else:
-            self._headers = {}
 
     def __repr__(self):
         """ Return a valid Python representation of this object.
@@ -584,20 +574,30 @@ class Resource(object):
         else:
             return None
 
-    def request(self, method, body=None, headers=None):
-        request_headers = dict(self._headers)
-        if headers:
-            request_headers.update(headers)
-        return Request(method, self.__uri__, body, request_headers)
+    def get(self, headers=None, redirect_limit=5, query=None, fragment=None,
+            fields=None, product=None, **response_kwargs):
+        rq = Request("GET", self.__uri__, None, headers)
+        return rq.submit(redirect_limit=redirect_limit, query=query,
+                         fragment=fragment, fields=fields, product=product,
+                         **response_kwargs)
 
-    def get(self, headers=None, **kwargs):
-        return self.request("GET", None, headers).submit(**kwargs)
+    def put(self, body=None, headers=None, redirect_limit=0, query=None,
+            fragment=None, fields=None, product=None, **response_kwargs):
+        rq = Request("PUT", self.__uri__, body, headers)
+        return rq.submit(redirect_limit=redirect_limit, query=query,
+                         fragment=fragment, fields=fields, product=product,
+                         **response_kwargs)
 
-    def put(self, body=None, headers=None, **kwargs):
-        return self.request("PUT", body, headers).submit(**kwargs)
+    def post(self, body=None, headers=None, redirect_limit=0, query=None,
+             fragment=None, fields=None, product=None, **response_kwargs):
+        rq = Request("POST", self.__uri__, body, headers)
+        return rq.submit(redirect_limit=redirect_limit, query=query,
+                         fragment=fragment, fields=fields, product=product,
+                         **response_kwargs)
 
-    def post(self, body=None, headers=None, **kwargs):
-        return self.request("POST", body, headers).submit(**kwargs)
-
-    def delete(self, headers=None, **kwargs):
-        return self.request("DELETE", None, headers).submit(**kwargs)
+    def delete(self, headers=None, redirect_limit=0, query=None, fragment=None,
+               fields=None, product=None, **response_kwargs):
+        rq = Request("DELETE", self.__uri__, None, headers)
+        return rq.submit(redirect_limit=redirect_limit, query=query,
+                         fragment=fragment, fields=fields, product=product,
+                         **response_kwargs)
