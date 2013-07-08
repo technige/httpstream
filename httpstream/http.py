@@ -361,9 +361,6 @@ class Response(object):
         self.close()
         return False
 
-    def _decode(self, data):
-        return data.decode(self.encoding)
-
     @property
     def closed(self):
         return not bool(self._http)
@@ -445,6 +442,8 @@ class Response(object):
         return self.content_type.partition("/")[0] == "text"
 
     def read(self, size=None):
+        """ Returns a bytearray.
+        """
         completed = False
         try:
             if size is None:
@@ -453,7 +452,7 @@ class Response(object):
             else:
                 data = self._response.read(size)
                 completed = bool(size and not data)
-            return data
+            return bytearray(data)
         finally:
             if completed:
                 self.close()
@@ -462,20 +461,21 @@ class Response(object):
         try:
             if not chunk_size:
                 chunk_size = self.chunk_size
-            pending = []
+            pending = bytearray()
             data = True
             while data:
                 data = self.read(chunk_size)
-                pending.append(data)
+                pending.extend(data)
                 decoded = None
                 while data and not decoded:
                     try:
-                        decoded = "".join(map(self._decode, pending))
-                        pending = []
-                        yield decoded
+                        decoded = pending.decode(self.encoding)
                     except UnicodeDecodeError:
                         data = self.read(1)
-                        pending.append(data)
+                        pending.extend(data)
+                    else:
+                        del pending[:]
+                        yield decoded
         finally:
             self.close()
 
