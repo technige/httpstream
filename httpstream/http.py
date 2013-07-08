@@ -32,12 +32,12 @@ import sys
 from . import __version__
 from .jsonstream import JSONStream
 from .numbers import *
-from .uri import URI
+from .uri import URI, URITemplate
 
 
 __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
-           "Response", "Redirection", "ClientError", "ServerError", "Resource"]
-
+           "Response", "Redirection", "ClientError", "ServerError", "Resource",
+           "ResourceTemplate"]
 
 default_encoding = "ISO-8859-1"
 default_chunk_size = 4096
@@ -68,21 +68,21 @@ class Loggable(object):
 
 class NetworkAddressError(Loggable, IOError):
 
-    def __init__(self, message, netloc=None):
-        self._netloc = netloc
+    def __init__(self, message, host_port=None):
+        self._host_port = host_port
         IOError.__init__(self, message)
         Loggable.__init__(self, self.__class__, message)
 
     @property
-    def netloc(self):
-        return self._netloc
+    def host_port(self):
+        return self._host_port
 
 
 class SocketError(Loggable, IOError):
 
-    def __init__(self, code, netloc=None):
+    def __init__(self, code, host_port=None):
         self._code = code
-        self._netloc = netloc
+        self._host_port = host_port
         message = os.strerror(code)
         IOError.__init__(self, message)
         Loggable.__init__(self, self.__class__, message)
@@ -92,8 +92,8 @@ class SocketError(Loggable, IOError):
         return self._code
 
     @property
-    def netloc(self):
-        return self._netloc
+    def host_port(self):
+        return self._host_port
 
 
 class RedirectionError(Loggable, HTTPException):
@@ -114,16 +114,16 @@ class ConnectionPuddle(local):
         "https": HTTPSConnection,
     }
 
-    def __init__(self, scheme, netloc):
+    def __init__(self, scheme, host_port):
         local.__init__(self)
         self._scheme = scheme
-        self._netloc = netloc
+        self._host_port = host_port
         self._active = []
         self._passive = []
 
     @property
-    def netloc(self):
-        return self._netloc
+    def host_port(self):
+        return self._host_port
 
     @property
     def scheme(self):
@@ -131,10 +131,10 @@ class ConnectionPuddle(local):
 
     def __repr__(self):
         return "({0}://{1} active={2} passive={3})".format(
-            self.scheme, self.netloc, len(self._active), len(self._passive))
+            self.scheme, self.host_port, len(self._active), len(self._passive))
 
     def __hash__(self):
-        return hash((self.scheme, self.netloc))
+        return hash((self.scheme, self.host_port))
 
     def __len__(self):
         return len(self._active) + len(self._passive)
@@ -143,7 +143,7 @@ class ConnectionPuddle(local):
         if self._passive:
             connection = self._passive.pop()
         else:
-            connection = self._http_classes[self.scheme](self.netloc)
+            connection = self._http_classes[self.scheme](self.host_port)
         self._active.append(connection)
         return connection
 
@@ -166,22 +166,22 @@ class ConnectionPool(object):
     _puddles = {}
 
     @classmethod
-    def _get_puddle(cls, scheme, netloc):
-        if ":" in netloc:
-            key = (scheme, netloc)
+    def _get_puddle(cls, scheme, host_port):
+        if ":" in host_port:
+            key = (scheme, host_port)
         elif scheme == "https":
-            key = (scheme, netloc + ":" + str(HTTPS_PORT))
+            key = (scheme, host_port + ":" + str(HTTPS_PORT))
         elif scheme == "http":
-            key = (scheme, netloc + ":" + str(HTTP_PORT))
+            key = (scheme, host_port + ":" + str(HTTP_PORT))
         else:
             raise ValueError("Unknown scheme " + repr(scheme))
         if key not in cls._puddles:
-            cls._puddles[key] = ConnectionPuddle(scheme, netloc)
+            cls._puddles[key] = ConnectionPuddle(scheme, host_port)
         return cls._puddles[key]
 
     @classmethod
-    def acquire(cls, scheme, netloc):
-        puddle = cls._get_puddle(scheme, netloc)
+    def acquire(cls, scheme, host_port):
+        puddle = cls._get_puddle(scheme, host_port)
         return puddle.acquire()
 
     @classmethod
@@ -202,9 +202,9 @@ def submit(method, uri, body, headers):
     """ Submit one HTTP request.
     """
     uri = URI(uri)
-    headers["Host"] = uri.netloc
+    headers["Host"] = uri.host_port
     try:
-        http = ConnectionPool.acquire(uri.scheme, uri.netloc)
+        http = ConnectionPool.acquire(uri.scheme, uri.host_port)
     except KeyError:
         raise ValueError("Unsupported URI scheme " + repr(uri.scheme))
 
@@ -221,7 +221,7 @@ def submit(method, uri, body, headers):
             log.info(">>> {0} {1} [0]".format(method, uri))
         for key, value in headers.items():
             log.debug(">>> {0}: {1}".format(key, value))
-        http.request(method, uri.reference, body, headers)
+        http.request(method, uri.absolute_path_reference, body, headers)
         return http.getresponse()
 
     try:
@@ -237,7 +237,7 @@ def submit(method, uri, body, headers):
         except timeout:
             response = send("timeout")
     except (gaierror, herror) as err:
-        raise NetworkAddressError(err.args[1], netloc=uri.netloc)
+        raise NetworkAddressError(err.args[1], host_port=uri.host_port)
     except error as err:
         if isinstance(err.args[0], tuple):
             code = err.args[0][0]
@@ -249,9 +249,9 @@ def submit(method, uri, body, headers):
             # ----
             # https://bugs.launchpad.net/ubuntu/+source/eglibc/+bug/1154599
             raise NetworkAddressError("Name or service not known",
-                                      netloc=uri.netloc)
+                                      host_port=uri.host_port)
         else:
-            raise SocketError(code, netloc=uri.netloc)
+            raise SocketError(code, host_port=uri.host_port)
     else:
         return http, response
 
@@ -295,15 +295,8 @@ class Request(object):
             self._headers.setdefault("Content-Type", "application/json")
         return self._headers
 
-    def submit(self, redirect_limit, query=None, fragment=None, fields=None,
-               product=None, **response_kwargs):
+    def submit(self, redirect_limit, product=None, **response_kwargs):
         uri = URI(self.uri)
-        if query is not None:
-            uri.query = query
-        if fragment is not None:
-            uri.fragment = fragment
-        if fields:
-            uri = uri.format(**dict(fields))
         headers = dict(self.headers)
         headers.setdefault("User-Agent", user_agent(product))
         while True:
@@ -576,30 +569,55 @@ class Resource(object):
         else:
             return None
 
-    def get(self, headers=None, redirect_limit=5, query=None, fragment=None,
-            fields=None, product=None, **response_kwargs):
+    def resolve(self, reference, strict=True):
+        return Resource(self.__uri__.resolve(reference, strict))
+
+    def get(self, headers=None, redirect_limit=5, product=None,
+            **response_kwargs):
         rq = Request("GET", self.__uri__, None, headers)
-        return rq.submit(redirect_limit=redirect_limit, query=query,
-                         fragment=fragment, fields=fields, product=product,
+        return rq.submit(redirect_limit=redirect_limit, product=product,
                          **response_kwargs)
 
-    def put(self, body=None, headers=None, redirect_limit=0, query=None,
-            fragment=None, fields=None, product=None, **response_kwargs):
+    def put(self, body=None, headers=None, redirect_limit=0, product=None,
+            **response_kwargs):
         rq = Request("PUT", self.__uri__, body, headers)
-        return rq.submit(redirect_limit=redirect_limit, query=query,
-                         fragment=fragment, fields=fields, product=product,
+        return rq.submit(redirect_limit=redirect_limit, product=product,
                          **response_kwargs)
 
-    def post(self, body=None, headers=None, redirect_limit=0, query=None,
-             fragment=None, fields=None, product=None, **response_kwargs):
+    def post(self, body=None, headers=None, redirect_limit=0, product=None,
+             **response_kwargs):
         rq = Request("POST", self.__uri__, body, headers)
-        return rq.submit(redirect_limit=redirect_limit, query=query,
-                         fragment=fragment, fields=fields, product=product,
+        return rq.submit(redirect_limit=redirect_limit, product=product,
                          **response_kwargs)
 
-    def delete(self, headers=None, redirect_limit=0, query=None, fragment=None,
-               fields=None, product=None, **response_kwargs):
+    def delete(self, headers=None, redirect_limit=0, product=None,
+               **response_kwargs):
         rq = Request("DELETE", self.__uri__, None, headers)
-        return rq.submit(redirect_limit=redirect_limit, query=query,
-                         fragment=fragment, fields=fields, product=product,
+        return rq.submit(redirect_limit=redirect_limit, product=product,
                          **response_kwargs)
+
+
+class ResourceTemplate(object):
+
+    def __init__(self, uri_template):
+        self._template = URITemplate(uri_template)
+
+    def __repr__(self):
+        """ Return a valid Python representation of this object.
+        """
+        return "{0}({1})".format(self.__class__.__name__, repr(self._template))
+
+    def __eq__(self, other):
+        """ Determine equality of two objects based on URI.
+        """
+        return (self.__class__ == other.__class and
+                self._template == other._template)
+
+    def __ne__(self, other):
+        """ Determine inequality of two objects based on URI.
+        """
+        return (self.__class__ != other.__class__ or
+                self._template != other._template)
+
+    def expand(self, **values):
+        return Resource(self._template.expand(**values))

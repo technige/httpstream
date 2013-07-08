@@ -25,7 +25,7 @@ def test_bad_hostname_will_fail():
         resource.get()
     except NetworkAddressError as err:
         assert True
-        assert err.netloc == "localtoast:6789"
+        assert err.host_port == "localtoast:6789"
     else:
         assert False
 
@@ -37,7 +37,7 @@ def test_bad_port_will_fail():
     except SocketError as err:
         assert True
         assert err.code == 111
-        assert err.netloc == "localhost:6789"
+        assert err.host_port == "localhost:6789"
     else:
         assert False
 
