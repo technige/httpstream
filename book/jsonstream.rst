@@ -1,35 +1,10 @@
-jsonstream Package
-==================
+httpstream.jsonstream Module
+============================
 
-:mod:`jsonstream` Package
--------------------------
-
-.. automodule:: jsonstream
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`exceptions` Module
+:mod:`jsonstream` Module
 ------------------------
 
-.. automodule:: jsonstream.exceptions
+.. automodule:: httpstream.jsonstream
     :members:
     :undoc-members:
     :show-inheritance:
-
-:mod:`tokeniser` Module
------------------------
-
-.. automodule:: jsonstream.tokeniser
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`util` Module
-------------------
-
-.. automodule:: jsonstream.util
-    :members:
-    :undoc-members:
-    :show-inheritance:
-

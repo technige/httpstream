@@ -9,14 +9,6 @@ httpstream Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`exceptions` Module
-------------------------
-
-.. automodule:: httpstream.exceptions
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 :mod:`http` Module
 ------------------
 
@@ -25,11 +17,10 @@ httpstream Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`uri` Module
------------------
+:mod:`numbers` Module
+---------------------
 
-.. automodule:: httpstream.uri
+.. automodule:: httpstream.numbers
     :members:
     :undoc-members:
     :show-inheritance:
-

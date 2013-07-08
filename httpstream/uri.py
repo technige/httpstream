@@ -16,6 +16,12 @@
 # limitations under the License.
 
 
+"""
+An implementation of URIs and URI Templates from RFC 3986 (URI Generic Syntax)
+and RFC 6570 (URI Template) respectively.
+"""
+
+
 from collections import OrderedDict
 import re
 
@@ -23,15 +29,21 @@ import re
 __all__ = ["percent_encode", "percent_decode", "Authority", "Path", "Query",
            "URI", "URITemplate"]
 
+# RFC 3986 § 2.2.
 general_delimiters = frozenset(":/?#[]@")
 subcomponent_delimiters = frozenset("!$&'()*+,;=")
-
 reserved = general_delimiters | subcomponent_delimiters
-unreserved = frozenset("-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~")
+
+# RFC 3986 § 2.3.
+unreserved = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                       "abcdefghijklmnopqrstuvwxyz"
+                       "0123456789-._~")
 
 
 def percent_encode(data, safe=None):
-    """ Percent encode data
+    """ Percent encode a string of data, optionally keeping certain characters
+    unencoded.
+
     """
     if data is None:
         return None
@@ -47,7 +59,8 @@ def percent_encode(data, safe=None):
 
 
 def percent_decode(data):
-    """ Percent decode data
+    """ Percent decode a string of data.
+
     """
     if data is None:
         return None
@@ -59,6 +72,8 @@ def percent_decode(data):
 
 
 class _Part(object):
+    """ Internal base class for all URI part objects.
+    """
 
     def __init__(self):
         pass
@@ -89,7 +104,21 @@ class _Part(object):
 class Authority(_Part):
     """ A host name plus optional port and user information detail.
 
-    authority := [ user_info "@" ] host [ ":" port ]
+    **Specification**
+    ::
+
+        http://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+               \__________________/
+                        |
+                    authority
+
+    **Syntax**
+        ``authority := [ user_info "@" ] host [ ":" port ]``
+
+    .. seealso::
+        `RFC 3986 § 3.2`_
+
+    .. _`RFC 3986 § 3.2`: http://tools.ietf.org/html/rfc3986#section-3.2
     """
 
     @classmethod

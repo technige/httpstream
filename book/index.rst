@@ -11,7 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
-   httpstream
+   http
+   uri
    jsonstream
 
 
