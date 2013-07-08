@@ -30,14 +30,14 @@ from threading import local
 import sys
 
 from . import __version__
-from .jsonstream import JSONStream
+from .jsonstream import JSONStream, assembled
 from .numbers import *
 from .uri import URI, URITemplate
 
 
 __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
            "Response", "Redirection", "ClientError", "ServerError", "Resource",
-           "ResourceTemplate"]
+           "ResourceTemplate", "get", "put", "post", "delete"]
 
 default_encoding = "ISO-8859-1"
 default_chunk_size = 4096
@@ -295,7 +295,7 @@ class Request(object):
             self._headers.setdefault("Content-Type", "application/json")
         return self._headers
 
-    def submit(self, redirect_limit, product=None, **response_kwargs):
+    def submit(self, redirect_limit=0, product=None, **response_kwargs):
         uri = URI(self.uri)
         headers = dict(self.headers)
         headers.setdefault("User-Agent", user_agent(product))
@@ -438,8 +438,31 @@ class Response(object):
                                      "application/x-javascript")
 
     @property
+    def json(self):
+        if not self.is_json:
+            raise TypeError("Content is not JSON")
+        return assembled(self.iter_json())
+
+    @property
     def is_text(self):
         return self.content_type.partition("/")[0] == "text"
+
+    @property
+    def text(self):
+        if not self.is_text:
+            raise TypeError("Content is not text")
+        return self.read().decode(self.encoding)
+
+    @property
+    def content(self):
+        if self.status_code == NO_CONTENT:
+            return None
+        elif self.is_json:
+            return self.json
+        elif self.is_text:
+            return self.text
+        else:
+            return self.read()
 
     def read(self, size=None):
         """ Returns a bytearray.
@@ -572,29 +595,21 @@ class Resource(object):
     def resolve(self, reference, strict=True):
         return Resource(self.__uri__.resolve(reference, strict))
 
-    def get(self, headers=None, redirect_limit=5, product=None,
-            **response_kwargs):
+    def get(self, headers=None, redirect_limit=5, **kwargs):
         rq = Request("GET", self.__uri__, None, headers)
-        return rq.submit(redirect_limit=redirect_limit, product=product,
-                         **response_kwargs)
+        return rq.submit(redirect_limit=redirect_limit, **kwargs)
 
-    def put(self, body=None, headers=None, redirect_limit=0, product=None,
-            **response_kwargs):
+    def put(self, body=None, headers=None, **kwargs):
         rq = Request("PUT", self.__uri__, body, headers)
-        return rq.submit(redirect_limit=redirect_limit, product=product,
-                         **response_kwargs)
+        return rq.submit(**kwargs)
 
-    def post(self, body=None, headers=None, redirect_limit=0, product=None,
-             **response_kwargs):
+    def post(self, body=None, headers=None, **kwargs):
         rq = Request("POST", self.__uri__, body, headers)
-        return rq.submit(redirect_limit=redirect_limit, product=product,
-                         **response_kwargs)
+        return rq.submit(**kwargs)
 
-    def delete(self, headers=None, redirect_limit=0, product=None,
-               **response_kwargs):
+    def delete(self, headers=None, **kwargs):
         rq = Request("DELETE", self.__uri__, None, headers)
-        return rq.submit(redirect_limit=redirect_limit, product=product,
-                         **response_kwargs)
+        return rq.submit(**kwargs)
 
 
 class ResourceTemplate(object):
@@ -621,3 +636,19 @@ class ResourceTemplate(object):
 
     def expand(self, **values):
         return Resource(self._template.expand(**values))
+
+
+def get(uri, headers=None, redirect_limit=5, **kwargs):
+    return Resource(uri).get(headers, redirect_limit, **kwargs)
+
+
+def put(uri, body=None, headers=None, **kwargs):
+    return Resource(uri).put(body, headers, **kwargs)
+
+
+def post(uri, body=None, headers=None, redirect_limit=0, **kwargs):
+    return Resource(uri).post(body, headers, redirect_limit, **kwargs)
+
+
+def delete(uri, headers=None, redirect_limit=0, **kwargs):
+    return Resource(uri).delete(headers, redirect_limit, **kwargs)
