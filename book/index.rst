@@ -13,13 +13,4 @@ Contents:
 
    http
    uri
-   jsonstream
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+   templates

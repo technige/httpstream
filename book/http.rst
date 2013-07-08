@@ -1,26 +1,29 @@
-httpstream Package
-==================
+HTTP Resources & Streaming
+==========================
 
-:mod:`httpstream` Package
--------------------------
+Resources
+---------
 
-.. automodule:: httpstream
+.. autoclass:: httpstream.http.Resource
+    :members: get, put, post, delete, resolve
+
+Requests & Responses
+--------------------
+
+.. autoclass:: httpstream.http.Request
     :members:
-    :undoc-members:
-    :show-inheritance:
 
-:mod:`http` Module
+.. autoclass:: httpstream.http.Response
+    :members:
+
+Incremental JSON Parsing
+------------------------
+
+.. autoclass:: httpstream.jsonstream.JSONStream
+    :members:
+
+Errors
+------
+
+Implicit Resources
 ------------------
-
-.. automodule:: httpstream.http
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`numbers` Module
----------------------
-
-.. automodule:: httpstream.numbers
-    :members:
-    :undoc-members:
-    :show-inheritance:

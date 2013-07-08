@@ -229,7 +229,7 @@ def submit(method, uri, body, headers):
             response = send()
         except BadStatusLine as err:
             if err.line == repr(""):
-                response = send("bad status line")
+                response = send("peer closed connection")
             else:
                 raise
         except ResponseNotReady:
@@ -563,12 +563,18 @@ class ServerError(Exception, Response):
 
 
 class Resource(object):
+    """ A web resource identified by a URI.
+
+    ::
+
+        from httpstream import http
+        res = http.Resource("https://api.duckduckgo.com/?q=neo4j?format=json")
+        res.get().content
+
+    """
 
     def __init__(self, uri):
-        if uri:
-            self._uri = str(uri)
-        else:
-            self._uri = None
+        self._uri = URI(uri)
 
     def __repr__(self):
         """ Return a valid Python representation of this object.
@@ -593,21 +599,50 @@ class Resource(object):
             return None
 
     def resolve(self, reference, strict=True):
+        """ Resolve a URI reference against the URI for this resource,
+        returning a new resource represented by the new target URI.
+        """
         return Resource(self.__uri__.resolve(reference, strict))
 
     def get(self, headers=None, redirect_limit=5, **kwargs):
+        """ Issue a ``GET`` request to this resource.
+
+        ::
+
+            resource = Resource("http://example.iana.org/")
+            with resource.get() as response:
+                for line in response:
+                    print line
+
+        :param headers: headers to be included in the request (optional)
+        :type headers: dict
+        :param redirect_limit: maximum number of redirects to be handled
+            automatically (optional, default=5)
+        :param product: name or (name, version) tuple for the client product to
+            be listed in the ``User-Agent`` header (optional)
+        :param chunk_size: number of bytes to retrieve per chunk (optional,
+            default=4096)
+        :return: file-like :py:class:`Response <httpstream.http.Response>`
+            object from which content can be read
+        """
         rq = Request("GET", self.__uri__, None, headers)
         return rq.submit(redirect_limit=redirect_limit, **kwargs)
 
     def put(self, body=None, headers=None, **kwargs):
+        """ Issue a ``PUT`` request to this resource.
+        """
         rq = Request("PUT", self.__uri__, body, headers)
         return rq.submit(**kwargs)
 
     def post(self, body=None, headers=None, **kwargs):
+        """ Issue a ``POST`` request to this resource.
+        """
         rq = Request("POST", self.__uri__, body, headers)
         return rq.submit(**kwargs)
 
     def delete(self, headers=None, **kwargs):
+        """ Issue a ``DELETE`` request to this resource.
+        """
         rq = Request("DELETE", self.__uri__, None, headers)
         return rq.submit(**kwargs)
 
