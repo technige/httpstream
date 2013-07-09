@@ -72,7 +72,7 @@ def percent_decode(data):
 
 
 class _Part(object):
-    """ Internal base class for all URI part objects.
+    """ Internal base class for all URI component parts.
     """
 
     def __init__(self):
@@ -103,14 +103,6 @@ class _Part(object):
 
 class Authority(_Part):
     """ A host name plus optional port and user information detail.
-
-    **Specification**
-    ::
-
-        http://bob@example.com:8080/data/report.html?date=2000-12-25#summary
-               \__________________/
-                        |
-                    authority
 
     **Syntax**
         ``authority := [ user_info "@" ] host [ ":" port ]``
@@ -164,7 +156,102 @@ class Authority(_Part):
         return hash(self.string)
 
     @property
+    def host(self):
+        """ The host part of this authority component, an empty string if host
+        is empty or :py:const:`None` if undefined.
+
+        ::
+
+            >>> Authority(None).host
+            None
+            >>> Authority("").host
+            ''
+            >>> Authority("example.com").host
+            'example.com'
+            >>> Authority("example.com:8080").host
+            'example.com'
+            >>> Authority("bob@example.com").host
+            'example.com'
+            >>> Authority("bob@example.com:8080").host
+            'example.com'
+
+        :return:
+        """
+        return self._host
+
+    @property
+    def host_port(self):
+        """ The host and port parts of this authority component or
+        :py:const:`None` if undefined.
+
+        ::
+
+            >>> Authority(None).host_port
+            None
+            >>> Authority("").host_port
+            ''
+            >>> Authority("example.com").host_port
+            'example.com'
+            >>> Authority("example.com:8080").host_port
+            'example.com:8080'
+            >>> Authority("bob@example.com").host_port
+            'example.com'
+            >>> Authority("bob@example.com:8080").host_port
+            'example.com:8080'
+
+        :return:
+        """
+        u = [self._host]
+        if self._port is not None:
+            u += [":", str(self._port)]
+        return "".join(u)
+
+    @property
+    def port(self):
+        """ The port part of this authority component or :py:const:`None` if
+        undefined.
+
+        ::
+
+            >>> Authority(None).port
+            None
+            >>> Authority("").port
+            None
+            >>> Authority("example.com").port
+            None
+            >>> Authority("example.com:8080").port
+            8080
+            >>> Authority("bob@example.com").port
+            None
+            >>> Authority("bob@example.com:8080").port
+            8080
+
+        :return:
+        """
+        return self._port
+
+    @property
     def string(self):
+        """ The full string value of this authority component or
+        :`py:const:`None` if undefined.
+
+        ::
+
+            >>> Authority(None).string
+            None
+            >>> Authority("").string
+            ''
+            >>> Authority("example.com").string
+            'example.com'
+            >>> Authority("example.com:8080").string
+            'example.com:8080'
+            >>> Authority("bob@example.com").string
+            'bob@example.com'
+            >>> Authority("bob@example.com:8080").string
+            'bob@example.com:8080'
+
+        :return:
+        """
         if self._host is None:
             return None
         u = []
@@ -177,22 +264,27 @@ class Authority(_Part):
         
     @property
     def user_info(self):
-        return self._user_info
-        
-    @property
-    def host(self):
-        return self._host
-        
-    @property
-    def port(self):
-        return self._port
+        """ The user information part of this authority component or
+        :py:const:`None` if undefined.
 
-    @property
-    def host_port(self):
-        u = [self._host]
-        if self._port is not None:
-            u += [":", str(self._port)]
-        return "".join(u)
+        ::
+
+            >>> Authority(None).user_info
+            None
+            >>> Authority("").user_info
+            None
+            >>> Authority("example.com").user_info
+            None
+            >>> Authority("example.com:8080").user_info
+            None
+            >>> Authority("bob@example.com").user_info
+            'bob'
+            >>> Authority("bob@example.com:8080").user_info
+            'bob'
+
+        :return:
+        """
+        return self._user_info
 
 
 class Path(_Part):
@@ -349,31 +441,10 @@ class Query(_Part):
 class URI(_Part):
     """ Uniform Resource Identifier.
 
-    
-    http://bob@example.com:8080/data/report.html?date=2000-12-25#summary
-    
-    absolute_path_reference
-        /data/report.html?date=2000-12-25#summary
-    authority
-        bob@example.com:8080
-    fragment
-        summary
-    hierarchical_part
-        //bob@example.com:8080/data/report.html
-    host
-        example.com
-    path
-        /data/report.html
-    port
-        8080
-    query
-        date=2000-12-25
-    scheme
-        http
-    string
-        http://bob@example.com:8080/data/report.html?date=2000-12-25#summary
-    user_info
-        bob
+    .. seealso::
+        `RFC 3986`_
+
+    .. _`RFC 3986`: http://tools.ietf.org/html/rfc3986
     """
 
     @classmethod
@@ -455,7 +526,37 @@ class URI(_Part):
 
     @property
     def string(self):
-        """ The entire URI as a string or :py:const:`None` if undefined.
+        """ The full percent-encoded string value of this URI or
+        :py:const:`None` if undefined.
+
+        ::
+
+            >>> URI(None).string
+            None
+            >>> URI("").string
+            ''
+            >>> URI("http://example.com").string
+            'example.com'
+            >>> URI("foo/bar").string
+            'foo/bar'
+            >>> URI("http://bob@example.com:8080/data/report.html?date=2000-12-25#summary").string
+            'http://bob@example.com:8080/data/report.html?date=2000-12-25#summary'
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+            \___________________________________________________________________/
+                                             |
+                                           string
+
+        :return: full string value of URI or :py:const:`None`
+        :rtype: :py:class:`str` or :py:class:`NoneType`
+
+        .. note::
+            Unlike ``string``, the ``__str__`` method will always return a
+            string, even when the URI is undefined; in this case, an empty
+            string is returned instead of :py:const:`None`.
         """
         if self._path is None:
             return None
@@ -473,14 +574,55 @@ class URI(_Part):
 
     @property
     def scheme(self):
+        """ The scheme part of this URI or :py:const:`None` if undefined.
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+            \___/
+              |
+            scheme
+
+        :return: string value of scheme part or :py:const:`None`
+        :rtype: :py:class:`str` or :py:class:`NoneType`
+        """
         return self._scheme
 
     @property
     def authority(self):
+        """ The authority part of this URI or :py:const:`None` if undefined.
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+                    \__________________/
+                             |
+                         authority
+
+        :return:
+        :rtype: :py:class:`Authority <httpstream.uri.Authority>` or
+            :py:class:`NoneType`
+        """
         return self._authority
 
     @property
     def user_info(self):
+        """ The user information part of this URI or :py:const:`None` if
+        undefined.
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+                    \_/
+                     |
+                 user_info
+
+        :return: string value of user information part or :py:const:`None`
+        :rtype: :py:class:`str` or :py:class:`NoneType`
+        """
         if self._authority is None:
             return None
         else:
@@ -555,8 +697,11 @@ class URI(_Part):
     def resolve(self, reference, strict=True):
         """ Transform a reference relative to this URI to produce a full target
         URI.
-        
-        RFC3986, section 5.2.2 Transform References
+
+        .. seealso::
+            `RFC 3986 § 5.2.2`_
+
+        .. _`RFC 3986 § 5.2.2`: http://tools.ietf.org/html/rfc3986#section-5.2.2
         """
         if reference is None:
             return None

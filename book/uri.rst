@@ -9,10 +9,17 @@ URIs
     :members:
     :undoc-members:
 
-.. seealso::
-    `RFC 3986`_
+.. autoclass:: httpstream.uri.Authority
+    :members:
+    :undoc-members:
 
-.. _`RFC 3986`: http://tools.ietf.org/html/rfc3986
+.. autoclass:: httpstream.uri.Path
+    :members:
+    :undoc-members:
+
+.. autoclass:: httpstream.uri.Query
+    :members:
+    :undoc-members:
 
 
 Percent Encoding
