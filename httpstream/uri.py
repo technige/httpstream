@@ -774,11 +774,11 @@ class URITemplate(_Part):
                     key, explode = key[:-1], True
                 else:
                     explode = False
-                    if ":" in key:
-                        key, max_length = key.partition(":")[0::2]
-                        max_length = int(max_length)
-                    else:
-                        max_length = None
+                if ":" in key:
+                    key, max_length = key.partition(":")[0::2]
+                    max_length = int(max_length)
+                else:
+                    max_length = None
                 value = self.values.get(key)
                 if isinstance(value, dict):
                     if not value:
@@ -808,16 +808,17 @@ class URITemplate(_Part):
                 else:
                     if isinstance(value, dict):
                         items[i] = ",".join(",".join(map(encode, item))
-                                             for item in value.items())
+                                            for item in value.items())
                     elif isinstance(value, list):
                         items[i] = ",".join(map(encode, value))
                     else:
                         items[i] = encode(value)
                     if with_keys:
-                        if items[i] or not trim_empty_equals:
-                            items[i] = encode(key) + "=" + items[i]
-                        else:
+                        if items[i] is None or (items[i] == "" and
+                                                trim_empty_equals):
                             items[i] = encode(key)
+                        else:
+                            items[i] = encode(key) + "=" + (items[i] or "")
             out = []
             for i, item in enumerate(items):
                 out.append(prefix if i == 0 else separator)

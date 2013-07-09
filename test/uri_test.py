@@ -594,7 +594,7 @@ def _test_expansions(expansions):
         "base": "http://example.com/home/",
         "path": "/foo/bar",
         "list": ("red", "green", "blue"),
-        "keys": OrderedDict([("semi",";"),("dot","."),("comma",",")]),
+        "keys": OrderedDict([("semi", ";"), ("dot", "."), ("comma", ",")]),
         "v": "6",
         "x": "1024",
         "y": "768",
