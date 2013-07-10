@@ -550,8 +550,7 @@ class URI(_Part):
                                              |
                                            string
 
-        :return: full string value of URI or :py:const:`None`
-        :rtype: :py:class:`str` or :py:class:`NoneType`
+        :rtype: percent-encoded string or :py:const:`None`
 
         .. note::
             Unlike ``string``, the ``__str__`` method will always return a
@@ -584,8 +583,7 @@ class URI(_Part):
               |
             scheme
 
-        :return: string value of scheme part or :py:const:`None`
-        :rtype: :py:class:`str` or :py:class:`NoneType`
+        :rtype: unencoded string or :py:const:`None`
         """
         return self._scheme
 
@@ -601,9 +599,8 @@ class URI(_Part):
                              |
                          authority
 
-        :return:
-        :rtype: :py:class:`Authority <httpstream.uri.Authority>` or
-            :py:class:`NoneType`
+        :rtype: :py:class:`Authority <httpstream.uri.Authority>` instance or
+            :py:const:`None`
         """
         return self._authority
 
@@ -621,7 +618,7 @@ class URI(_Part):
                  user_info
 
         :return: string value of user information part or :py:const:`None`
-        :rtype: :py:class:`str` or :py:class:`NoneType`
+        :rtype: unencoded string or :py:const:`None`
         """
         if self._authority is None:
             return None
@@ -630,6 +627,30 @@ class URI(_Part):
 
     @property
     def host(self):
+        """ The *host* part of this URI or :py:const:`None` if undefined.
+
+        ::
+
+            >>> URI(None).host
+            None
+            >>> URI("").host
+            None
+            >>> URI("http://example.com").host
+            'example.com'
+            >>> URI("http://example.com:8080/data").host
+            'example.com'
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+                        \_________/
+                             |
+                            host
+
+        :return:
+        :rtype: unencoded string or :py:const:`None`
+        """
         if self._authority is None:
             return None
         else:
@@ -637,6 +658,30 @@ class URI(_Part):
         
     @property
     def port(self):
+        """ The *port* part of this URI or :py:const:`None` if undefined.
+
+        ::
+
+            >>> URI(None).port
+            None
+            >>> URI("").port
+            None
+            >>> URI("http://example.com").port
+            None
+            >>> URI("http://example.com:8080/data").port
+            8080
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+                                    \__/
+                                     |
+                                    port
+
+        :return:
+        :rtype: integer or :py:const:`None`
+        """
         if self._authority is None:
             return None
         else:
@@ -644,6 +689,33 @@ class URI(_Part):
 
     @property
     def host_port(self):
+        """ The *host* and *port* parts of this URI separated by a colon or
+        :py:const:`None` if both are undefined.
+
+        ::
+
+            >>> URI(None).host_port
+            None
+            >>> URI("").host_port
+            None
+            >>> URI("http://example.com").host_port
+            'example.com'
+            >>> URI("http://example.com:8080/data").host_port
+            'example.com:8080'
+            >>> URI("http://bob@example.com:8080/data").host_port
+            'example.com:8080'
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+                        \______________/
+                               |
+                           host_port
+
+        :return:
+        :rtype: percent-encoded string or :py:const:`None`
+        """
         if self._authority is None:
             return None
         else:
@@ -651,18 +723,73 @@ class URI(_Part):
 
     @property
     def path(self):
+        """ The *path* part of this URI or :py:const:`None` if undefined.
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+                                        \_______________/
+                                                |
+                                               path
+
+        :return:
+        :rtype: :py:class:`Path <httpstream.uri.Path>` instance or
+            :py:const:`None`
+        """
         return self._path
 
     @property
     def query(self):
+        """ The *query* part of this URI or :py:const:`None` if undefined.
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+                                                          \_____________/
+                                                                 |
+                                                               query
+
+        :rtype: :py:class:`Query <httpstream.uri.Query>` instance or
+            :py:const:`None`
+        """
         return self._query
 
     @property
     def fragment(self):
+        """ The *fragment* part of this URI or :py:const:`None` if undefined.
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+                                                                          \_____/
+                                                                             |
+                                                                          fragment
+
+        :return:
+        :rtype: unencoded string or :py:const:`None`
+        """
         return self._fragment
 
     @property
     def hierarchical_part(self):
+        """ The authority and path parts of this URI or :py:const:`None` if
+        undefined.
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+                    \___________________________________/
+                                      |
+                              hierarchical_part
+
+        :return: combined string values of authority and path parts or
+            :py:const:`None`
+        :rtype: percent-encoded string or :py:const:`None`
+        """
         if self._path is None:
             return None
         u = []
@@ -673,6 +800,21 @@ class URI(_Part):
 
     @property
     def absolute_path_reference(self):
+        """ The path, query and fragment parts of this URI or :py:const:`None`
+        if undefined.
+
+        **Component Definition:**
+        ::
+
+            https://bob@example.com:8080/data/report.html?date=2000-12-25#summary
+                                        \_______________________________________/
+                                                            |
+                                                  absolute_path_reference
+
+        :return: combined string values of path, query and fragment parts or
+            :py:const:`None`
+        :rtype: percent-encoded string or :py:const:`None`
+        """
         if self._path is None:
             return None
         u = [str(self._path)]

@@ -2,26 +2,28 @@
 HTTPStream
 ==========
 
-**HTTPStream** is an HTTP client library for Python that is designed to allow
-incremental receipt and handling of web content. Additionally, large JSON
-documents may be parsed incrementally and reassembled into a series of smaller
-objects and arrays as required.
+**HTTPStream** is a simple and pragmatic HTTP client library for Python that
+provides support for incremental JSON document retrieval and RFC 6570 URI
+Templates.
 
 
 Installation
 ============
 
-HTTPStream is hosted on PyPI and so to install, simply use pip::
+HTTPStream is hosted on PyPI and so to install, simply use ``easy_install``
+or - preferably - ``pip``::
 
+    easy_install httpstream
     pip install httpstream
 
-No external dependencies are required, the entire package is self-contained.
+No external dependencies are required, the entire package is self-contained and
+relies only on standard library components.
 
 
 Basic Usage
 ===========
 
-HTTPStream is based around ``Resource`` objects which are defined by a URI
+HTTPStream is centred around ``Resource`` objects which are defined by a URI
 and may be accessed via methods such as ``get`` and ``post``. A ``Resource``
 may be declared as follows::
 
@@ -30,36 +32,34 @@ may be declared as follows::
 
 Once defined, accessor methods can be used on a resource in much the same way
 as the Python built-in method, ``open``. These return file-like ``Response``
-objects which may be read in full or iterated through. To consume the entire
-response, simply use the ``read`` method on the response::
+objects which may be read in full or iterated through. To retrieve the entire
+response, simply access its ``content`` property. This returns data of a type
+appropriate to that specified in the ``Content-Type`` header: a *string* for
+``text/*`` content, a *dictionary* for ``application/json`` content or a
+*bytearray* for everything else::
 
-    >>> print res.get().read()
-    <!DOCTYPE html>
+    >>> print res.get().content
+    <!doctype html>
     <html>
-      <head>
-        <title>Example</title>
-      </head>
-      <body>
-        <h1>Welcome</h1>
-        <p>Lorem ipsum...</p>
-      </body>
-    </html>
+    <head>
+        <title>Example Domain</title>
+        ...
+
 
 Other Methods
 =============
 
 As well as ``get``, there are ``put``, ``post`` and ``delete`` methods
 available. Both ``put`` and ``post`` can take optional payload data and all
-methods can take a dictionary of header fields:
+methods can take a dictionary of header fields. For example::
 
-- ``.get(headers=None, **kwargs)``
-- ``.put(body=None, headers=None, **kwargs)``
-- ``.post(body=None, headers=None, **kwargs)``
-- ``.delete(headers=None, **kwargs)``
+    >> res.post("foo")
+    >> res.post({"foo": "bar"})
 
 The ``body`` can be either a string or a dictionary. If a dictionary is
 passed, the payload is automatically converted to JSON and the
-``Content-Type`` header field set accordingly.
+``Content-Type`` header field is set accordingly.
+
 
 Responses
 =========
