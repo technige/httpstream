@@ -826,6 +826,8 @@ def test_can_expand_form_query_continuations():
 def test_can_parse_none_uri_template():
     template = URITemplate(None)
     assert template.string is None
+    uri = template.expand()
+    assert uri.string is None
 
 
 def test_can_parse_uri_template():

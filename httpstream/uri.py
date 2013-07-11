@@ -1047,7 +1047,7 @@ class URITemplate(_Part):
         """ Expand into a URI using the values supplied
         """
         if self._template is None:
-            return None
+            return URI(None)
         tokens = self._tokeniser.split(self._template)
         expander = URITemplate._Expander(values)
         out = []
