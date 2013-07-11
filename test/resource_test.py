@@ -16,7 +16,7 @@
 # limitations under the License.
 
 
-from httpstream import Resource, NetworkAddressError, SocketError
+from httpstream import Resource, NetworkAddressError, SocketError, ResourceTemplate, URI, URITemplate
 
 
 def test_bad_hostname_will_fail():
@@ -54,3 +54,42 @@ def test_can_get_substituted_uri():
     for key, value in rs:
         print(key, value)
     assert rs.status_code == 200
+
+
+def test_can_create_none_resource():
+    resource = Resource(None)
+    assert resource.uri == URI(None)
+    assert not bool(resource)
+
+
+def test_can_create_resource_from_empty_string():
+    resource = Resource("")
+    assert resource.uri == URI("")
+    assert not bool(resource)
+
+
+def test_can_create_resource_from_string():
+    resource = Resource("http://example.com/foo")
+    assert resource.uri == URI("http://example.com/foo")
+    assert bool(resource)
+
+
+def test_can_create_resource_from_none_uri():
+    uri = URI(None)
+    resource = Resource(uri)
+    assert resource.uri == uri
+    assert not bool(resource)
+
+
+def test_can_create_resource_from_empty_uri():
+    uri = URI("")
+    resource = Resource(uri)
+    assert resource.uri == uri
+    assert not bool(resource)
+
+
+def test_can_create_resource_from_uri():
+    uri = URI("http://example.com/foo")
+    resource = Resource(uri)
+    assert resource.uri == uri
+    assert bool(resource)

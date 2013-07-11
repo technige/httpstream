@@ -29,4 +29,4 @@ __version__ = "0.9.8"
 
 
 from .http import *
-from .uri import URI
+from .uri import *

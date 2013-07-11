@@ -577,32 +577,38 @@ class Resource(object):
         self._uri = URI(uri)
 
     def __repr__(self):
-        """ Return a valid Python representation of this object.
-        """
-        return "{0}({1})".format(self.__class__.__name__, repr(self.__uri__))
+        return "{0}({1})".format(self.__class__.__name__,
+                                 repr(self._uri.string))
 
     def __eq__(self, other):
         """ Determine equality of two objects based on URI.
         """
-        return self.__uri__ == other.__uri__
+        return self._uri == other._uri
 
     def __ne__(self, other):
         """ Determine inequality of two objects based on URI.
         """
-        return self.__uri__ != other.__uri__
+        return self._uri != other._uri
+
+    def __bool__(self):
+        return bool(self._uri)
+
+    def __nonzero__(self):
+        return bool(self._uri)
 
     @property
     def __uri__(self):
-        if self._uri:
-            return URI(redirects.get(self._uri, self._uri))
-        else:
-            return None
+        return self._uri
+
+    @property
+    def uri(self):
+        return self._uri
 
     def resolve(self, reference, strict=True):
         """ Resolve a URI reference against the URI for this resource,
         returning a new resource represented by the new target URI.
         """
-        return Resource(self.__uri__.resolve(reference, strict))
+        return Resource(self._uri.resolve(reference, strict))
 
     def get(self, headers=None, redirect_limit=5, **kwargs):
         """ Issue a ``GET`` request to this resource.
@@ -625,52 +631,55 @@ class Resource(object):
         :return: file-like :py:class:`Response <httpstream.http.Response>`
             object from which content can be read
         """
-        rq = Request("GET", self.__uri__, None, headers)
+        rq = Request("GET", self._uri, None, headers)
         return rq.submit(redirect_limit=redirect_limit, **kwargs)
 
     def put(self, body=None, headers=None, **kwargs):
         """ Issue a ``PUT`` request to this resource.
         """
-        rq = Request("PUT", self.__uri__, body, headers)
+        rq = Request("PUT", self._uri, body, headers)
         return rq.submit(**kwargs)
 
     def post(self, body=None, headers=None, **kwargs):
         """ Issue a ``POST`` request to this resource.
         """
-        rq = Request("POST", self.__uri__, body, headers)
+        rq = Request("POST", self._uri, body, headers)
         return rq.submit(**kwargs)
 
     def delete(self, headers=None, **kwargs):
         """ Issue a ``DELETE`` request to this resource.
         """
-        rq = Request("DELETE", self.__uri__, None, headers)
+        rq = Request("DELETE", self._uri, None, headers)
         return rq.submit(**kwargs)
 
 
 class ResourceTemplate(object):
 
     def __init__(self, uri_template):
-        self._template = URITemplate(uri_template)
+        self._uri_template = URITemplate(uri_template)
 
     def __repr__(self):
-        """ Return a valid Python representation of this object.
-        """
-        return "{0}({1})".format(self.__class__.__name__, repr(self._template))
+        return "{0}({1})".format(self.__class__.__name__,
+                                 repr(self._uri_template.string))
 
     def __eq__(self, other):
-        """ Determine equality of two objects based on URI.
-        """
-        return (self.__class__ == other.__class and
-                self._template == other._template)
+        return self._uri_template == other._template
 
     def __ne__(self, other):
-        """ Determine inequality of two objects based on URI.
-        """
-        return (self.__class__ != other.__class__ or
-                self._template != other._template)
+        return self._uri_template != other._template
+
+    def __bool__(self):
+        return bool(self._uri_template)
+
+    def __nonzero__(self):
+        return bool(self._uri_template)
+
+    @property
+    def uri_template(self):
+        return self._uri_template
 
     def expand(self, **values):
-        return Resource(self._template.expand(**values))
+        return Resource(self._uri_template.expand(**values))
 
 
 def get(uri, headers=None, redirect_limit=5, **kwargs):

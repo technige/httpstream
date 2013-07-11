@@ -116,7 +116,7 @@ class Authority(_Part):
     @classmethod
     def _cast(cls, obj):
         if obj is None:
-            return None
+            return cls(None)
         elif isinstance(obj, cls):
             return obj
         else:
@@ -292,7 +292,7 @@ class Path(_Part):
     @classmethod
     def _cast(cls, obj):
         if obj is None:
-            return None
+            return cls(None)
         elif isinstance(obj, cls):
             return obj
         else:
@@ -369,7 +369,7 @@ class Query(_Part):
     @classmethod
     def _cast(cls, obj):
         if obj is None:
-            return None
+            return cls(None)
         elif isinstance(obj, cls):
             return obj
         else:
@@ -450,7 +450,7 @@ class URI(_Part):
     @classmethod
     def _cast(cls, obj):
         if obj is None:
-            return None
+            return cls(None)
         elif isinstance(obj, cls):
             return obj
         else:
@@ -458,6 +458,16 @@ class URI(_Part):
 
     def __init__(self, value):
         super(URI, self).__init__()
+        try:
+            if value.__uri__ is None:
+                self._scheme = None
+                self._authority = None
+                self._path = None
+                self._query = None
+                self._fragment = None
+                return
+        except AttributeError:
+            pass
         if value is None:
             self._scheme = None
             self._authority = None
