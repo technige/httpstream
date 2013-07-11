@@ -576,6 +576,9 @@ class Resource(object):
     def __init__(self, uri):
         self._uri = URI(uri)
 
+    def __str__(self):
+        return "<{0}>".format(str(self._uri))
+
     def __repr__(self):
         return "{0}({1})".format(self.__class__.__name__,
                                  repr(self._uri.string))
@@ -656,17 +659,23 @@ class Resource(object):
 class ResourceTemplate(object):
 
     def __init__(self, uri_template):
-        self._uri_template = URITemplate(uri_template)
+        if isinstance(uri_template, URITemplate):
+            self._uri_template = uri_template
+        else:
+            self._uri_template = URITemplate(uri_template)
+
+    def __str__(self):
+        return "<{0}>".format(str(self._uri_template))
 
     def __repr__(self):
         return "{0}({1})".format(self.__class__.__name__,
                                  repr(self._uri_template.string))
 
     def __eq__(self, other):
-        return self._uri_template == other._template
+        return self._uri_template == other._uri_template
 
     def __ne__(self, other):
-        return self._uri_template != other._template
+        return self._uri_template != other._uri_template
 
     def __bool__(self):
         return bool(self._uri_template)

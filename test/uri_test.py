@@ -319,7 +319,7 @@ def test_can_parse_none_uri():
     uri = URI(None)
     assert repr(uri) == "URI(None)"
     assert str(uri) == ""
-    assert uri.string == None
+    assert uri.string is None
     assert uri.scheme is None
     assert uri.hierarchical_part is None
     assert uri.query is None
@@ -345,6 +345,7 @@ def test_can_parse_empty_string():
     assert uri.user_info is None
     assert uri.host is None
     assert uri.port is None
+
 
 def test_can_parse_absolute_path():
     uri = URI("/foo/bar")
@@ -460,15 +461,22 @@ def test_can_parse_uri_with_root_path():
 
 
 def test_can_parse_full_uri():
-    uri = URI("foo://bob@somewhere@example.com:8042/over/there?name=ferret#nose")
-    assert repr(uri) == "URI('foo://bob%40somewhere@example.com:8042/over/there?name=ferret#nose')"
-    assert str(uri) == "foo://bob%40somewhere@example.com:8042/over/there?name=ferret#nose"
-    assert len(uri) == len("foo://bob%40somewhere@example.com:8042/over/there?name=ferret#nose")
+    uri = URI("foo://bob@somewhere@example.com:8042"
+              "/over/there?name=ferret#nose")
+    assert repr(uri) == ("URI('foo://bob%40somewhere@example.com:8042"
+                         "/over/there?name=ferret#nose')")
+    assert str(uri) ==\
+        "foo://bob%40somewhere@example.com:8042/over/there?name=ferret#nose"
+    assert len(uri) == (len("foo://bob%40somewhere@example.com:8042"
+                            "/over/there?name=ferret#nose"))
     assert bool(uri) == True
-    assert URI(uri) == "foo://bob%40somewhere@example.com:8042/over/there?name=ferret#nose"
-    assert uri.string == "foo://bob%40somewhere@example.com:8042/over/there?name=ferret#nose"
+    assert URI(uri) == \
+        "foo://bob%40somewhere@example.com:8042/over/there?name=ferret#nose"
+    assert uri.string == \
+        "foo://bob%40somewhere@example.com:8042/over/there?name=ferret#nose"
     assert uri.scheme == "foo"
-    assert uri.hierarchical_part == "//bob%40somewhere@example.com:8042/over/there"
+    assert uri.hierarchical_part == \
+        "//bob%40somewhere@example.com:8042/over/there"
     assert uri.query == "name=ferret"
     assert dict(uri.query) == {"name": "ferret"}
     assert uri.query["name"] == "ferret"
@@ -757,7 +765,7 @@ def test_can_expand_form_query_continuations():
 
 def test_can_parse_none_uri_template():
     template = URITemplate(None)
-    assert template.string == None
+    assert template.string is None
 
 
 def test_can_parse_uri_template():

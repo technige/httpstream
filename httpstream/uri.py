@@ -903,7 +903,7 @@ class URITemplate(_Part):
     @classmethod
     def _cast(cls, obj):
         if obj is None:
-            return None
+            return cls(None)
         elif isinstance(obj, cls):
             return obj
         else:
@@ -1025,7 +1025,7 @@ class URITemplate(_Part):
     def string(self):
         if self._template is None:
             return None
-        return self._template
+        return str(self._template)
 
     def expand(self, **values):
         """ Expand into a URI using the values supplied

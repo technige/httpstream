@@ -56,22 +56,31 @@ def test_can_get_substituted_uri():
     assert rs.status_code == 200
 
 
+# RESOURCE CREATION
+
+
 def test_can_create_none_resource():
     resource = Resource(None)
     assert resource.uri == URI(None)
     assert not bool(resource)
+    assert repr(resource) == "Resource(None)"
+    assert str(resource) == "<>"
 
 
 def test_can_create_resource_from_empty_string():
     resource = Resource("")
     assert resource.uri == URI("")
     assert not bool(resource)
+    assert repr(resource) == "Resource('')"
+    assert str(resource) == "<>"
 
 
 def test_can_create_resource_from_string():
     resource = Resource("http://example.com/foo")
     assert resource.uri == URI("http://example.com/foo")
     assert bool(resource)
+    assert repr(resource) == "Resource('http://example.com/foo')"
+    assert str(resource) == "<http://example.com/foo>"
 
 
 def test_can_create_resource_from_none_uri():
@@ -79,6 +88,8 @@ def test_can_create_resource_from_none_uri():
     resource = Resource(uri)
     assert resource.uri == uri
     assert not bool(resource)
+    assert repr(resource) == "Resource(None)"
+    assert str(resource) == "<>"
 
 
 def test_can_create_resource_from_empty_uri():
@@ -86,6 +97,8 @@ def test_can_create_resource_from_empty_uri():
     resource = Resource(uri)
     assert resource.uri == uri
     assert not bool(resource)
+    assert repr(resource) == "Resource('')"
+    assert str(resource) == "<>"
 
 
 def test_can_create_resource_from_uri():
@@ -93,3 +106,59 @@ def test_can_create_resource_from_uri():
     resource = Resource(uri)
     assert resource.uri == uri
     assert bool(resource)
+    assert repr(resource) == "Resource('http://example.com/foo')"
+    assert str(resource) == "<http://example.com/foo>"
+
+
+# RESOURCE TEMPLATE CREATION
+
+
+def test_can_create_none_resource_template():
+    template = ResourceTemplate(None)
+    assert template.uri_template == URITemplate(None)
+    assert not bool(template)
+    assert repr(template) == "ResourceTemplate(None)"
+    assert str(template) == "<>"
+
+
+def test_can_create_resource_template_from_empty_string():
+    template = ResourceTemplate("")
+    assert template.uri_template == URITemplate("")
+    assert not bool(template)
+    assert repr(template) == "ResourceTemplate('')"
+    assert str(template) == "<>"
+
+
+def test_can_create_resource_template_from_string():
+    template = ResourceTemplate("http://example.com/foo/{bar}")
+    assert template.uri_template == URITemplate("http://example.com/foo/{bar}")
+    assert bool(template)
+    assert repr(template) == "ResourceTemplate('http://example.com/foo/{bar}')"
+    assert str(template) == "<http://example.com/foo/{bar}>"
+
+
+def test_can_create_resource_template_from_none_uri_template():
+    uri_template = URITemplate(None)
+    template = ResourceTemplate(uri_template)
+    assert template.uri_template == uri_template
+    assert not bool(template)
+    assert repr(template) == "ResourceTemplate(None)"
+    assert str(template) == "<>"
+
+
+def test_can_create_resource_template_from_empty_uri_template():
+    uri_template = URITemplate("")
+    template = ResourceTemplate(uri_template)
+    assert template.uri_template == uri_template
+    assert not bool(template)
+    assert repr(template) == "ResourceTemplate('')"
+    assert str(template) == "<>"
+
+
+def test_can_create_resource_template_from_uri_template():
+    uri_template = URITemplate("http://example.com/foo/{bar}")
+    template = ResourceTemplate(uri_template)
+    assert template.uri_template == uri_template
+    assert bool(template)
+    assert repr(template) == "ResourceTemplate('http://example.com/foo/{bar}')"
+    assert str(template) == "<http://example.com/foo/{bar}>"
