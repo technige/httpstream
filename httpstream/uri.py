@@ -363,6 +363,22 @@ class Path(_Part):
                 inp = slash + inp
         return Path(out)
 
+    def with_trailing_slash(self):
+        if self._path is None:
+            return self
+        elif self._path.endswith("/"):
+            return self
+        else:
+            return Path(self._path + "/")
+
+    def without_trailing_slash(self):
+        if self._path is None:
+            return self
+        elif self._path.endswith("/"):
+            return Path(self._path[:-1])
+        else:
+            return self
+
 
 class Query(_Part):
 

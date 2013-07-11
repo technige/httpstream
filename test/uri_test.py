@@ -213,6 +213,66 @@ def test_can_remove_dot_segments_2():
     assert path_out == "mid/6"
 
 
+def test_can_add_trailing_slash_to_path():
+    path = Path("/foo/bar")
+    path = path.with_trailing_slash()
+    assert path.string == "/foo/bar/"
+
+
+def test_wont_add_trailing_slash_to_path_that_already_has_one():
+    path = Path("/foo/bar/")
+    path = path.with_trailing_slash()
+    assert path.string == "/foo/bar/"
+
+
+def test_wont_add_trailing_slash_to_root_path():
+    path = Path("/")
+    path = path.with_trailing_slash()
+    assert path.string == "/"
+
+
+def test_can_add_trailing_slash_to_empty_path():
+    path = Path("")
+    path = path.with_trailing_slash()
+    assert path.string == "/"
+
+
+def test_cant_add_trailing_slash_to_none_path():
+    path = Path(None)
+    path = path.with_trailing_slash()
+    assert path.string is None
+
+
+def test_can_remove_trailing_slash_from_path():
+    path = Path("/foo/bar/")
+    path = path.without_trailing_slash()
+    assert path.string == "/foo/bar"
+
+
+def test_wont_remove_trailing_slash_if_none_exists():
+    path = Path("/foo/bar")
+    path = path.without_trailing_slash()
+    assert path.string == "/foo/bar"
+
+
+def test_will_remove_root_path_slash():
+    path = Path("/")
+    path = path.without_trailing_slash()
+    assert path.string == ""
+
+
+def test_cannot_remove_trailing_slash_from_empty_string():
+    path = Path("")
+    path = path.without_trailing_slash()
+    assert path.string == ""
+
+
+def test_cant_remove_trailing_slash_from_none_path():
+    path = Path(None)
+    path = path.without_trailing_slash()
+    assert path.string is None
+
+
 # QUERY
 
 
