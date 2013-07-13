@@ -16,7 +16,8 @@
 # limitations under the License.
 
 
-from httpstream import Resource, ResourceTemplate, RedirectionError
+from httpstream import (Resource, ResourceTemplate, RedirectionError,
+                        default_encoding)
 from httpstream.jsonstream import assembled, grouped
 from httpstream.numbers import *
 
@@ -72,6 +73,13 @@ PEOPLE = {
         "favourite_colours": []
     }
 }
+
+
+def test_can_set_default_encoding():
+    global default_encoding
+    assert default_encoding == "ISO-8859-1"
+    default_encoding = "UTF-8"
+    assert default_encoding == "UTF-8"
 
 
 def test_can_get_simple_text_resource():

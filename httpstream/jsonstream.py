@@ -26,10 +26,7 @@ except ImportError:
 from itertools import groupby
 from string import whitespace
 try:
-    try:
-        from cStringIO import StringIO
-    except ImportError:
-        from StringIO import StringIO
+    from StringIO import StringIO
 except ImportError:
     from io import StringIO
 

@@ -18,10 +18,12 @@
 
 try:
     from http.client import (BadStatusLine, CannotSendRequest, HTTPConnection,
-                             HTTPSConnection, HTTPException, responses, ResponseNotReady)
+                             HTTPSConnection, HTTPException, ResponseNotReady,
+                             responses)
 except ImportError:
     from httplib import (BadStatusLine, CannotSendRequest, HTTPConnection,
-                         HTTPSConnection, HTTPException, responses, ResponseNotReady)
+                         HTTPSConnection, HTTPException, ResponseNotReady,
+                         responses)
 import json
 import logging
 import os
