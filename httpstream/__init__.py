@@ -25,7 +25,7 @@ __author__ = "Nigel Small"
 __copyright__ = "2013, Nigel Small"
 __email__ = "nigel@nigelsmall.com"
 __license__ = "Apache License, Version 2.0"
-__version__ = "0.9.8"
+__version__ = "0.9.9"
 
 
 from .http import *
