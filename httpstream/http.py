@@ -221,8 +221,9 @@ def submit(method, uri, body, headers):
             log.info(">>> {0} {1} [{2}]".format(method, uri, len(body)))
         else:
             log.info(">>> {0} {1} [0]".format(method, uri))
-        for key, value in headers.items():
-            log.debug(">>> {0}: {1}".format(key, value))
+        if __debug__:
+            for key, value in headers.items():
+                log.debug(">>> {0}: {1}".format(key, value))
         http.request(method, uri.absolute_path_reference, body, headers)
         return http.getresponse()
 
@@ -338,8 +339,9 @@ class Response(object):
         self._reason = kwargs.get("reason")
         self.chunk_size = kwargs.get("chunk_size", default_chunk_size)
         log.info("<<< {0}".format(self))
-        for key, value in self._response.getheaders():
-            log.debug("<<< {0}: {1}".format(key, value))
+        if __debug__:
+            for key, value in self._response.getheaders():
+                log.debug("<<< {0}: {1}".format(key, value))
 
     def __del__(self):
         self.close()
