@@ -31,6 +31,9 @@ except ImportError:
     from io import StringIO
 
 
+__all__ = ["JSONStream", "assembled", "grouped"]
+
+
 class AwaitingData(BaseException):
     """ Raised when data is temporarily unavailable.
     """

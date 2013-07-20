@@ -29,4 +29,5 @@ __version__ = "0.9.9"
 
 
 from .http import *
+from .jsonstream import *
 from .uri import *

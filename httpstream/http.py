@@ -40,7 +40,7 @@ from .uri import URI, URITemplate
 
 __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
            "Response", "Redirection", "ClientError", "ServerError", "Resource",
-           "ResourceTemplate", "get", "put", "post", "delete"]
+           "ResourceTemplate", "get", "put", "post", "delete", "head"]
 
 default_encoding = "ISO-8859-1"
 default_chunk_size = 4096
@@ -570,13 +570,6 @@ class ServerError(Exception, Response):
 
 class Resource(object):
     """ A web resource identified by a URI.
-
-    ::
-
-        from httpstream import http
-        res = http.Resource("https://api.duckduckgo.com/?q=neo4j?format=json")
-        res.get().content
-
     """
 
     def __init__(self, uri):
@@ -622,13 +615,6 @@ class Resource(object):
     def get(self, headers=None, redirect_limit=5, **kwargs):
         """ Issue a ``GET`` request to this resource.
 
-        ::
-
-            resource = Resource("http://example.iana.org/")
-            with resource.get() as response:
-                for line in response:
-                    print line
-
         :param headers: headers to be included in the request (optional)
         :type headers: dict
         :param redirect_limit: maximum number of redirects to be handled
@@ -660,6 +646,12 @@ class Resource(object):
         """
         rq = Request("DELETE", self._uri, None, headers)
         return rq.submit(**kwargs)
+
+    def head(self, headers=None, redirect_limit=5, **kwargs):
+        """ Issue a ``HEAD`` request to this resource.
+        """
+        rq = Request("HEAD", self._uri, None, headers)
+        return rq.submit(redirect_limit=redirect_limit, **kwargs)
 
 
 class ResourceTemplate(object):
@@ -711,3 +703,7 @@ def post(uri, body=None, headers=None, redirect_limit=0, **kwargs):
 
 def delete(uri, headers=None, redirect_limit=0, **kwargs):
     return Resource(uri).delete(headers, redirect_limit, **kwargs)
+
+
+def head(uri, headers=None, redirect_limit=5, **kwargs):
+    return Resource(uri).head(headers, redirect_limit, **kwargs)
