@@ -265,6 +265,7 @@ class Request(object):
     def __init__(self, method, uri, body=None, headers=None):
         if not uri:
             raise ValueError("No URI specified for request")
+        #: HTTP method of this request
         self.method = method
         self.uri = uri
         self._headers = dict(headers or {})
@@ -276,6 +277,8 @@ class Request(object):
 
     @property
     def uri(self):
+        """ URI of the request.
+        """
         return self._uri
 
     @uri.setter
@@ -284,6 +287,8 @@ class Request(object):
 
     @property
     def body(self):
+        """ Content of the request.
+        """
         if isinstance(self._body, (dict, list, tuple)):
             return json.dumps(self._body, cls=JSONEncoder,
                               separators=(",", ":"))
@@ -296,11 +301,16 @@ class Request(object):
 
     @property
     def headers(self):
+        """ Dictionary of headers attached to the request.
+        """
         if isinstance(self._body, (dict, list, tuple)):
             self._headers.setdefault("Content-Type", "application/json")
         return self._headers
 
     def submit(self, redirect_limit=0, product=None, **response_kwargs):
+        """ Submit this request and return a
+        :py:class:`Response <httpstream.Response>` object.
+        """
         uri = URI(self.uri)
         headers = dict(self.headers)
         headers.setdefault("User-Agent", user_agent(product))
@@ -339,6 +349,7 @@ class Response(object):
         self._request = request
         self._response = response
         self._reason = kwargs.get("reason")
+        #: Default chunk size for this response
         self.chunk_size = kwargs.get("chunk_size", default_chunk_size)
         log.info("<<< {0}".format(self))
         if __debug__:
@@ -369,9 +380,14 @@ class Response(object):
 
     @property
     def closed(self):
+        """ Indicates whether or not the response is closed.
+        """
         return not bool(self._http)
 
     def close(self):
+        """ Close the response, discarding all remaining content and releasing
+        the underlying connection object.
+        """
         if self._http:
             try:
                 self._response.read()
@@ -386,18 +402,26 @@ class Response(object):
 
     @property
     def uri(self):
+        """ The URI from which the response came.
+        """
         return self._uri
 
     @property
     def request(self):
+        """ The :py:class:`Request` object which preceded this response.
+        """
         return self._request
 
     @property
     def status_code(self):
+        """ The status code of the response
+        """
         return self._response.status
 
     @property
     def reason(self):
+        """ The reason phrase attached to this response.
+        """
         if self._reason:
             return self._reason
         else:
@@ -405,15 +429,22 @@ class Response(object):
 
     @property
     def headers(self):
+        """ The response headers.
+        """
         return self._response.getheaders()
 
     @property
     def content_length(self):
+        """ The length of content as provided by the `Content-Length` header
+        field. If the content is chunked, this returns :py:const:`None`.
+        """
         if not self.is_chunked:
             return int(self._response.getheader("Content-Length", 0))
 
     @property
     def content_type(self):
+        """ The type of content as provided by the `Content-Type` header field.
+        """
         try:
             content_type = [
                 _.strip()
@@ -425,6 +456,8 @@ class Response(object):
 
     @property
     def encoding(self):
+        """ The content character set encoding.
+        """
         try:
             content_type = dict(
                 _.strip().partition("=")[0::2]
@@ -436,31 +469,45 @@ class Response(object):
 
     @property
     def is_chunked(self):
+        """ Indicates whether or not the content is chunked.
+        """
         return self._response.getheader("Transfer-Encoding") == "chunked"
 
     @property
     def is_json(self):
+        """ Indicates whether or not the content is JSON.
+        """
         return self.content_type in ("application/json",
                                      "application/x-javascript")
 
     @property
     def json(self):
+        """ Fetch all content, decoding from JSON and returning the decoded
+        value.
+        """
         if not self.is_json:
             raise TypeError("Content is not JSON")
         return assembled(self.iter_json())
 
     @property
     def is_text(self):
+        """ Indicates whether or not the content is text.
+        """
         return self.content_type.partition("/")[0] == "text"
 
     @property
     def text(self):
+        """ Fetches all content as a string.
+        """
         if not self.is_text:
             raise TypeError("Content is not text")
         return self.read().decode(self.encoding)
 
     @property
     def content(self):
+        """ Fetch all content, returning a value appropriate for the content
+        type.
+        """
         if self.status_code == NO_CONTENT:
             return None
         elif self.is_json:
@@ -471,7 +518,7 @@ class Response(object):
             return self.read()
 
     def read(self, size=None):
-        """ Returns a bytearray.
+        """ Fetch some or all of the response content, returning as a bytearray.
         """
         completed = False
         try:
@@ -487,6 +534,10 @@ class Response(object):
                 self.close()
 
     def iter_chunks(self, chunk_size=None):
+        """ Iterate through the content as chunks of text. Chunk sizes may vary
+        slightly from that specified due to multi-byte characters. If no chunk
+        size is specified, a default of 4096 is used.
+        """
         try:
             if not chunk_size:
                 chunk_size = self.chunk_size
@@ -509,9 +560,13 @@ class Response(object):
             self.close()
 
     def iter_json(self):
+        """ Iterate through the content as individual JSON values.
+        """
         return iter(JSONStream(self.iter_chunks()))
 
     def iter_lines(self, keep_ends=False):
+        """ Iterate through the content as lines of text.
+        """
         data = ""
         for chunk in self.iter_chunks():
             data += chunk
@@ -604,6 +659,8 @@ class Resource(object):
 
     @property
     def uri(self):
+        """ The URI of this resource.
+        """
         return self._uri
 
     def resolve(self, reference, strict=True):
@@ -683,9 +740,13 @@ class ResourceTemplate(object):
 
     @property
     def uri_template(self):
+        """ The URI template string of this resource template.
+        """
         return self._uri_template
 
     def expand(self, **values):
+        """ Expand this template into a full URI using the values provided.
+        """
         return Resource(self._uri_template.expand(**values))
 
 

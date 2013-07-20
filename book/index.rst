@@ -173,3 +173,14 @@ characters which are not within a permitted set.
 Errors
 ------
 
+.. autoclass:: httpstream.NetworkAddressError
+    :members:
+    :undoc-members:
+
+.. autoclass:: httpstream.SocketError
+    :members:
+    :undoc-members:
+
+.. autoclass:: httpstream.RedirectionError
+    :members:
+    :undoc-members:
