@@ -32,6 +32,7 @@ from threading import local
 import sys
 
 from . import __version__
+from .jsonencoder import JSONEncoder
 from .jsonstream import JSONStream, assembled
 from .numbers import *
 from .uri import URI, URITemplate
@@ -284,7 +285,8 @@ class Request(object):
     @property
     def body(self):
         if isinstance(self._body, (dict, list, tuple)):
-            return json.dumps(self._body, separators=(",", ":"))
+            return json.dumps(self._body, cls=JSONEncoder,
+                              separators=(",", ":"))
         else:
             return self._body
 
