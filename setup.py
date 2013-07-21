@@ -37,7 +37,7 @@ setup(
     long_description=open("README.rst").read(),
     author=__author__,
     author_email=__email__,
-    url="https://github.com/nigelsmall/httpstream",
+    url="https://httpstream.readthedocs.org/",
     packages=[
         "httpstream",
     ],
