@@ -103,10 +103,39 @@ Resource Templates
 Requests & Responses
 --------------------
 
+HTTPStream defines four types of response objects. A standard ``Response`` is
+generated on receipt of a 2xx status code and a ``ClientError`` and
+``ServerError`` may be raised on receipt of 4xx and 5xx statuses respectively.
+The fourth response type is ``Redirection`` which is generally consumed
+internally but may also be returned under certain circumstances.
+
+Response objects are file-like and as such may be ``read`` or iterated through
+The ``iter_lines`` and ``iter_json`` methods may be used to step through
+known types of content. The response object itself may also be iterated
+directly and an appropriate type of iterator is selected depending on the
+type of content available. The example below shows how to print each line of
+textual content as it is received::
+
+    >>> for line in res.get():
+    ...     print line
+
+
 .. autoclass:: httpstream.Request
     :members:
 
 .. autoclass:: httpstream.Response
+    :members:
+
+.. autoclass:: httpstream.Redirection
+    :show-inheritance:
+    :members:
+
+.. autoclass:: httpstream.ClientError
+    :show-inheritance:
+    :members:
+
+.. autoclass:: httpstream.ServerError
+    :show-inheritance:
     :members:
 
 
@@ -173,14 +202,14 @@ characters which are not within a permitted set.
 Errors
 ------
 
-.. autoclass:: httpstream.NetworkAddressError
+.. autoexception:: httpstream.NetworkAddressError
     :members:
     :undoc-members:
 
-.. autoclass:: httpstream.SocketError
+.. autoexception:: httpstream.SocketError
     :members:
     :undoc-members:
 
-.. autoclass:: httpstream.RedirectionError
+.. autoexception:: httpstream.RedirectionError
     :members:
     :undoc-members:
