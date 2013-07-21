@@ -14,12 +14,14 @@ or - preferably - ``pip``::
 No external dependencies are required, the entire package is self-contained and
 relies only on standard library components.
 
-For information on how to use HTTPStream, check out the pages on
+For further information on how to use HTTPStream, check out the pages on
 `Read the Docs <https://httpstream.readthedocs.org/>`_.
+
+----
 
 If you need to get in touch (or would like to leave a tip)...
 
-GitHub  : nigelsmall
-Twitter : @technige
-Email   : nigel@nigelsmall.com
-Bitcoin : 13FoUCdhSjcqdnJyoi1QGmhnuBsmYzS6fj
+- GitHub  : nigelsmall
+- Twitter : @technige
+- Email   : nigel@nigelsmall.com
+- Bitcoin : 13FoUCdhSjcqdnJyoi1QGmhnuBsmYzS6fj
