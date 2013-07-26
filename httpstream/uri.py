@@ -29,15 +29,16 @@ import re
 __all__ = ["percent_encode", "percent_decode", "Authority", "Path", "Query",
            "URI", "URITemplate"]
 
+
 # RFC 3986 § 2.2.
-general_delimiters = frozenset(":/?#[]@")
-subcomponent_delimiters = frozenset("!$&'()*+,;=")
-reserved = general_delimiters | subcomponent_delimiters
+general_delimiters = ":/?#[]@"
+subcomponent_delimiters = "!$&'()*+,;="
+reserved = general_delimiters + subcomponent_delimiters
 
 # RFC 3986 § 2.3.
-unreserved = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                       "abcdefghijklmnopqrstuvwxyz"
-                       "0123456789-._~")
+unreserved = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+              "abcdefghijklmnopqrstuvwxyz"
+              "0123456789-._~")
 
 
 def percent_encode(data, safe=None):
@@ -47,14 +48,16 @@ def percent_encode(data, safe=None):
     """
     if data is None:
         return None
-    if safe:
-        safe = unreserved | frozenset(safe)
-    else:
-        safe = unreserved
-    chars = list(str(data))
+    if not safe:
+        safe = ""
+    try:
+        chars = list(data)
+    except TypeError:
+        chars = list(str(data))
     for i, char in enumerate(chars):
-        if char == "%" or char not in safe:
-            chars[i] = "%" + hex(ord(char))[2:].upper().zfill(2)
+        if char == "%" or (char not in unreserved and char not in safe):
+            chars[i] = "".join("%" + hex(b)[2:].upper().zfill(2)
+                               for b in bytearray(char, "utf-8"))
     return "".join(chars)
 
 
@@ -64,11 +67,18 @@ def percent_decode(data):
     """
     if data is None:
         return None
-    bits = re.split("(%[0-9A-Fa-f]{2})", str(data))
-    for i, bit in enumerate(bits):
+    percent_code = re.compile("(%[0-9A-Fa-f]{2})")
+    try:
+        bits = percent_code.split(data)
+    except TypeError:
+        bits = percent_code.split(str(data))
+    out = bytearray()
+    for bit in bits:
         if bit.startswith("%"):
-            bits[i] = chr(int(bit[1:], 16))
-    return "".join(bits)
+            out.extend(bytearray([int(bit[1:], 16)]))
+        else:
+            out.extend(bytearray(bit, "utf-8"))
+    return out.decode("utf-8")
 
 
 class _Part(object):

@@ -48,6 +48,11 @@ def test_can_percent_encode_reserved_chars():
     assert encoded == "20%25%20of%20%24100%20%3D%20%2420"
 
 
+def test_can_percent_encode_extended_chars():
+    encoded = percent_encode(u"El Niño")
+    assert encoded == "El%20Ni%C3%B1o"
+
+
 def test_can_percent_decode_none():
     decoded = percent_decode(None)
     assert decoded is None
@@ -71,6 +76,20 @@ def test_can_percent_decode_string():
 def test_can_percent_decode_reserved_chars():
     decoded = percent_decode("20%25%20of%20%24100%20%3D%20%2420")
     assert decoded == "20% of $100 = $20"
+
+
+def test_can_percent_decode_extended_chars():
+    decoded = percent_decode("El%20Ni%C3%B1o")
+    assert decoded == u"El Niño"
+
+
+def test_percent_decoding_partial_extended_chars_will_fail():
+    try:
+        percent_decode("El%20Ni%C3")
+    except UnicodeDecodeError:
+        assert True
+    else:
+        assert False
 
 
 # AUTHORITY
