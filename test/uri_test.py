@@ -97,7 +97,6 @@ def test_percent_decoding_partial_extended_chars_will_fail():
 
 def test_can_parse_none_authority():
     auth = Authority(None)
-    assert repr(auth) == "Authority(None)"
     assert str(auth) == ""
     assert auth.string is None
     assert auth.user_info is None
@@ -107,7 +106,6 @@ def test_can_parse_none_authority():
 
 def test_can_parse_empty_authority():
     auth = Authority("")
-    assert repr(auth) == "Authority('')"
     assert str(auth) == ""
     assert auth.string == ""
     assert auth.user_info is None
@@ -117,7 +115,6 @@ def test_can_parse_empty_authority():
 
 def test_can_parse_host_authority():
     auth = Authority("example.com")
-    assert repr(auth) == "Authority('example.com')"
     assert str(auth) == "example.com"
     assert auth.string == "example.com"
     assert auth.user_info is None
@@ -127,7 +124,6 @@ def test_can_parse_host_authority():
 
 def test_can_parse_host_port_authority():
     auth = Authority("example.com:6789")
-    assert repr(auth) == "Authority('example.com:6789')"
     assert str(auth) == "example.com:6789"
     assert auth.string == "example.com:6789"
     assert auth.user_info is None
@@ -137,7 +133,6 @@ def test_can_parse_host_port_authority():
 
 def test_can_parse_user_host_authority():
     auth = Authority("bob@example.com")
-    assert repr(auth) == "Authority('bob@example.com')"
     assert str(auth) == "bob@example.com"
     assert auth.string == "bob@example.com"
     assert auth.user_info == "bob"
@@ -147,7 +142,6 @@ def test_can_parse_user_host_authority():
 
 def test_can_parse_email_user_host_authority():
     auth = Authority("bob@example.com@example.com")
-    assert repr(auth) == "Authority('bob%40example.com@example.com')"
     assert str(auth) == "bob%40example.com@example.com"
     assert auth.string == "bob%40example.com@example.com"
     assert auth.user_info == "bob@example.com"
@@ -157,7 +151,6 @@ def test_can_parse_email_user_host_authority():
 
 def test_can_parse_full_authority():
     auth = Authority("bob@example.com:6789")
-    assert repr(auth) == "Authority('bob@example.com:6789')"
     assert str(auth) == "bob@example.com:6789"
     assert auth.string == "bob@example.com:6789"
     assert auth.user_info == "bob"
@@ -182,28 +175,24 @@ def test_authority_inequality():
 
 def test_can_parse_none_path():
     path = Path(None)
-    assert repr(path) == "Path(None)"
     assert str(path) == ""
     assert path.string is None
 
 
 def test_can_parse_empty_path():
     path = Path("")
-    assert repr(path) == "Path('')"
     assert str(path) == ""
     assert path.string == ""
 
 
 def test_can_parse_absolute_path():
     path = Path("/foo/bar")
-    assert repr(path) == "Path('/foo/bar')"
     assert str(path) == "/foo/bar"
     assert path.string == "/foo/bar"
 
 
 def test_can_parse_relative_path():
     path = Path("foo/bar")
-    assert repr(path) == "Path('foo/bar')"
     assert str(path) == "foo/bar"
     assert path.string == "foo/bar"
 
@@ -297,7 +286,6 @@ def test_cant_remove_trailing_slash_from_none_path():
 
 def test_can_parse_none_query():
     query = Query(None)
-    assert repr(query) == "Query(None)"
     assert str(query) == ""
     assert query.string is None
     assert dict(query) == {}
@@ -311,7 +299,6 @@ def test_can_parse_none_query():
 
 def test_can_parse_empty_query():
     query = Query("")
-    assert repr(query) == "Query('')"
     assert str(query) == ""
     assert query.string == ""
     assert dict(query) == {}
@@ -325,7 +312,6 @@ def test_can_parse_empty_query():
 
 def test_can_parse_key_only_query():
     query = Query("foo")
-    assert repr(query) == "Query('foo')"
     assert str(query) == "foo"
     assert query.string == "foo"
     assert dict(query) == {"foo": None}
@@ -334,7 +320,6 @@ def test_can_parse_key_only_query():
 
 def test_can_parse_key_value_query():
     query = Query("foo=bar")
-    assert repr(query) == "Query('foo=bar')"
     assert str(query) == "foo=bar"
     assert query.string == "foo=bar"
     assert dict(query) == {"foo": "bar"}
@@ -343,7 +328,6 @@ def test_can_parse_key_value_query():
 
 def test_can_parse_multi_key_value_query():
     query = Query("foo=bar&spam=eggs")
-    assert repr(query) == "Query('foo=bar&spam=eggs')"
     assert str(query) == "foo=bar&spam=eggs"
     assert query.string == "foo=bar&spam=eggs"
     assert dict(query) == {"foo": "bar", "spam": "eggs"}
@@ -353,7 +337,6 @@ def test_can_parse_multi_key_value_query():
 
 def test_can_parse_mixed_query():
     query = Query("foo&spam=eggs")
-    assert repr(query) == "Query('foo&spam=eggs')"
     assert str(query) == "foo&spam=eggs"
     assert query.string == "foo&spam=eggs"
     assert dict(query) == {"foo": None, "spam": "eggs"}
@@ -396,7 +379,6 @@ def test_query_inequality():
 
 def test_can_parse_none_uri():
     uri = URI(None)
-    assert repr(uri) == "URI(None)"
     assert str(uri) == ""
     assert uri.string is None
     assert uri.scheme is None
@@ -412,7 +394,6 @@ def test_can_parse_none_uri():
 
 def test_can_parse_empty_string():
     uri = URI("")
-    assert repr(uri) == "URI('')"
     assert str(uri) == ""
     assert uri.string == ""
     assert uri.scheme is None
@@ -428,7 +409,6 @@ def test_can_parse_empty_string():
 
 def test_can_parse_absolute_path():
     uri = URI("/foo/bar")
-    assert repr(uri) == "URI('/foo/bar')"
     assert str(uri) == "/foo/bar"
     assert uri.string == "/foo/bar"
     assert uri.scheme is None
@@ -444,7 +424,6 @@ def test_can_parse_absolute_path():
 
 def test_can_parse_relative_path():
     uri = URI("foo/bar")
-    assert repr(uri) == "URI('foo/bar')"
     assert str(uri) == "foo/bar"
     assert uri.string == "foo/bar"
     assert uri.scheme is None
@@ -460,7 +439,6 @@ def test_can_parse_relative_path():
 
 def test_can_parse_only_query():
     uri = URI("?foo=bar")
-    assert repr(uri) == "URI('?foo=bar')"
     assert str(uri) == "?foo=bar"
     assert uri.string == "?foo=bar"
     assert uri.scheme is None
@@ -477,7 +455,6 @@ def test_can_parse_only_query():
 
 def test_can_parse_only_fragment():
     uri = URI("#foo")
-    assert repr(uri) == "URI('#foo')"
     assert str(uri) == "#foo"
     assert uri.string == "#foo"
     assert uri.scheme is None
@@ -493,7 +470,6 @@ def test_can_parse_only_fragment():
 
 def test_can_parse_uri_without_scheme():
     uri = URI("//example.com")
-    assert repr(uri) == "URI('//example.com')"
     assert str(uri) == "//example.com"
     assert uri.string == "//example.com"
     assert uri.scheme is None
@@ -509,7 +485,6 @@ def test_can_parse_uri_without_scheme():
 
 def test_can_parse_simple_uri():
     uri = URI("foo://example.com")
-    assert repr(uri) == "URI('foo://example.com')"
     assert str(uri) == "foo://example.com"
     assert uri.string == "foo://example.com"
     assert uri.scheme == "foo"
@@ -525,7 +500,6 @@ def test_can_parse_simple_uri():
 
 def test_can_parse_uri_with_root_path():
     uri = URI("foo://example.com/")
-    assert repr(uri) == "URI('foo://example.com/')"
     assert str(uri) == "foo://example.com/"
     assert uri.string == "foo://example.com/"
     assert uri.scheme == "foo"
@@ -542,8 +516,6 @@ def test_can_parse_uri_with_root_path():
 def test_can_parse_full_uri():
     uri = URI("foo://bob@somewhere@example.com:8042"
               "/over/there?name=ferret#nose")
-    assert repr(uri) == ("URI('foo://bob%40somewhere@example.com:8042"
-                         "/over/there?name=ferret#nose')")
     assert str(uri) ==\
         "foo://bob%40somewhere@example.com:8042/over/there?name=ferret#nose"
     assert len(uri) == (len("foo://bob%40somewhere@example.com:8042"
