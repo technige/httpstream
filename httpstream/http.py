@@ -16,6 +16,8 @@
 # limitations under the License.
 
 
+from __future__ import unicode_literals
+
 try:
     from http.client import (BadStatusLine, CannotSendRequest, HTTPConnection,
                              HTTPSConnection, HTTPException, ResponseNotReady,

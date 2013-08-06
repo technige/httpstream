@@ -16,6 +16,8 @@
 # limitations under the License.
 
 
+from __future__ import unicode_literals
+
 from httpstream import Resource, NetworkAddressError, SocketError, ResourceTemplate, URI, URITemplate
 
 

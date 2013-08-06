@@ -16,6 +16,8 @@
 # limitations under the License.
 
 
+from __future__ import unicode_literals
+
 import json
 
 from httpstream.jsonencoder import JSONEncoder
@@ -77,12 +79,12 @@ def test_can_encode_string():
 
 def test_can_encode_unicode_string():
     try:
-        data = u"hellö, wörld"
+        data = "hellö, wörld"
     except SyntaxError:
         assert True
     else:
         string = json.dumps(data, cls=JSONEncoder, separators=(",", ":"))
-        assert string == r'"hell\u00f6, w\u00f6rld"'
+        assert string == '"hell\\u00f6, w\\u00f6rld"'
 
 
 def test_can_encode_dict():

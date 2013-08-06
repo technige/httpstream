@@ -16,6 +16,8 @@
 # limitations under the License.
 
 
+from __future__ import unicode_literals
+
 from httpstream import http, Resource, ResourceTemplate, RedirectionError
 from httpstream.jsonstream import assembled, grouped
 from httpstream.numbers import *

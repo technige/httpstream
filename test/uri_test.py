@@ -16,7 +16,7 @@
 # limitations under the License.
 
 
-from __future__ import print_function
+from __future__ import unicode_literals, print_function
 
 from httpstream.uri import (percent_encode, percent_decode, Authority, Path,
                             Query, URI, URITemplate)

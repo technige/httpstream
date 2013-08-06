@@ -16,6 +16,8 @@
 # limitations under the License.
 
 
+from __future__ import unicode_literals
+
 import json
 from httpstream.jsonstream import JSONStream, assembled
 
@@ -44,6 +46,6 @@ def test_can_assemble_data():
             }
         }
     ]
-    data_in = json.dumps(src)
+    data_in = json.dumps(src, ensure_ascii=False)
     data_out = assembled(JSONStream(data_in))
     assert data_out == src
