@@ -177,6 +177,13 @@ def test_can_get_multi_object_json_resource():
             assert assembled(person) == PEOPLE[name]
 
 
+def test_can_get_block_json_resource():
+    resource = Resource("http://localhost:8080/object")
+    with resource.get() as response:
+        assert response.is_json
+        assert response.json == OBJECT
+
+
 def test_can_use_resource_with_template_uri():
     resource_tmpl = ResourceTemplate("http://localhost:8080/person/{name}")
     for name in PEOPLE.keys():
