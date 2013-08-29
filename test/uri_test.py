@@ -197,6 +197,12 @@ def test_can_parse_relative_path():
     assert path.string == "foo/bar"
 
 
+def test_can_parse_path_with_encoded_slash():
+    path = Path("/foo/bar%2Fbaz")
+    assert str(path) == "/foo/bar%2Fbaz"
+    assert path.string == "/foo/bar%2Fbaz"
+
+
 def test_path_equality():
     path1 = Path("/foo/bar")
     path2 = Path("/foo/bar")
