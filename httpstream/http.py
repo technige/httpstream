@@ -163,7 +163,7 @@ class ConnectionPuddle(local):
             connection.close()
 
 
-class ConnectionPool(object):
+class ConnectionPool(local):
     """ A collection of :py:class:`ConnectionPuddle` objects for various
     network locations.
     """
