@@ -113,7 +113,7 @@ def test_can_encode_tuple():
 
 
 def test_can_encode_set():
-    data = {1, 2}
+    data = set([1, 2])
     string = json.dumps(data, cls=JSONEncoder, separators=(",", ":"))
     assert string in ('[1,2]', '[2,1]')
 
