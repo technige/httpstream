@@ -20,7 +20,10 @@ from __future__ import unicode_literals, print_function
 
 from httpstream.uri import (percent_encode, percent_decode, Authority, Path,
                             Query, URI, URITemplate)
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except ImportError:
+    from .util.ordereddict import OrderedDict
 
 
 def test_can_percent_encode_none():

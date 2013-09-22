@@ -56,19 +56,24 @@ def test_can_encode_negative_integer():
 def test_can_encode_positive_float():
     data = 3.1415926
     string = json.dumps(data, cls=JSONEncoder, separators=(",", ":"))
-    assert string == '3.1415926'
+    assert float(string) == data
 
 
 def test_can_encode_negative_float():
     data = -3.1415926
     string = json.dumps(data, cls=JSONEncoder, separators=(",", ":"))
-    assert string == '-3.1415926'
+    assert float(string) == data
 
 
 def test_can_encode_complex():
     data = 42 + 3.14j
     string = json.dumps(data, cls=JSONEncoder, separators=(",", ":"))
-    assert string == '[42.0,3.14]'
+    # a bit of a roundabout check but works with python 2.6
+    assert string.startswith("[")
+    assert string.endswith("]")
+    parts = tuple(map(float, string[1:-1].split(",")))
+    assert parts[0] == 42.0
+    assert parts[1] == 3.14
 
 
 def test_can_encode_string():
@@ -94,7 +99,10 @@ def test_can_encode_dict():
 
 
 def test_can_encode_ordered_dict():
-    from collections import OrderedDict
+    try:
+        from collections import OrderedDict
+    except ImportError:
+        from .util.ordereddict import OrderedDict
     data = OrderedDict([("one", 1), ("two", 2), ("three", 2), ("four", 2)])
     string = json.dumps(data, cls=JSONEncoder, separators=(",", ":"))
     assert string == '{"one":1,"two":2,"three":2,"four":2}'
