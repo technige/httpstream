@@ -770,12 +770,12 @@ def put(uri, body=None, headers=None, **kwargs):
     return Resource(uri).put(body, headers, **kwargs)
 
 
-def post(uri, body=None, headers=None, redirect_limit=0, **kwargs):
-    return Resource(uri).post(body, headers, redirect_limit, **kwargs)
+def post(uri, body=None, headers=None, **kwargs):
+    return Resource(uri).post(body, headers, **kwargs)
 
 
-def delete(uri, headers=None, redirect_limit=0, **kwargs):
-    return Resource(uri).delete(headers, redirect_limit, **kwargs)
+def delete(uri, headers=None, **kwargs):
+    return Resource(uri).delete(headers, **kwargs)
 
 
 def head(uri, headers=None, redirect_limit=5, **kwargs):
