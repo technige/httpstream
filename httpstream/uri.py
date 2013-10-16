@@ -49,6 +49,16 @@ def percent_encode(data, safe=None):
     """
     if data is None:
         return None
+    if isinstance(data, (tuple, list, set)):
+        return "&".join(
+            percent_encode(value, safe)
+            for value in data
+        )
+    if isinstance(data, dict):
+        return "&".join(
+            key + "=" + percent_encode(value, safe)
+            for key, value in data.items()
+        )
     if not safe:
         safe = ""
     try:
