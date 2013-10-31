@@ -209,7 +209,7 @@ def submit(method, uri, body, headers):
     """
     uri = URI(uri)
     headers["Host"] = uri.host_port
-        if uri.user_info:
+    if uri.user_info:
         credentials = uri.user_info.encode("UTF-8")
         value = "Basic " + b64encode(credentials).decode("ASCII")
         headers["Authorization"] = value
