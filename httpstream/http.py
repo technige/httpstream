@@ -255,6 +255,15 @@ def submit(method, uri, body, headers):
             if code == 32:
                 # EPIPE: Broken pipe
                 response = send("broken pipe")
+            elif code == 102:
+                # ENETRESET: Network dropped connection because of reset
+                response = send("network reset")
+            elif code == 103:
+                # ECONNABORTED: Software caused connection abort
+                response = send("connection aborted")
+            elif code == 104:
+                # ECONNRESET: Connection reset by peer
+                response = send("connection reset")
             else:
                 raise
     except (gaierror, herror) as err:
