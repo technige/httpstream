@@ -530,6 +530,24 @@ class Response(object):
         return self.read().decode(self.encoding)
 
     @property
+    def is_tsj(self):
+        """ Indicates whether or not the content is tab-separated JSON.
+        """
+        return self.content_type == "text/x-tab-separated-json"
+
+    @property
+    def tsj(self):
+        """ Fetches all content, decoding from tab-separated JSON and returning
+        the decoded values.
+        """
+        if not self.is_tsj:
+            raise TypeError("Content is not tab-separated JSON")
+        return [
+            [json.loads(value) for value in line.split("\t")]
+            for line in self.read().decode(self.encoding).splitlines()
+        ]
+
+    @property
     def content(self):
         """ Fetch all content, returning a value appropriate for the content
         type.
@@ -538,6 +556,8 @@ class Response(object):
             return None
         elif self.is_json:
             return self.json
+        elif self.is_tsj:
+            return self.tsj
         elif self.is_text:
             return self.text
         else:
@@ -615,11 +635,19 @@ class Response(object):
         if data:
             yield data
 
+    def iter_tsj(self):
+        """ Iterate through the content as lines of tab-separated JSON.
+        """
+        for line in self.iter_lines():
+            yield [json.loads(value) for value in line.split("\t")]
+
     def __iter__(self):
         if self.status_code == NO_CONTENT:
             return iter([])
         elif self.is_json:
             return self.iter_json()
+        elif self.is_tsj:
+            return self.iter_tsj()
         elif self.is_text:
             return self.iter_lines()
         else:
