@@ -36,6 +36,20 @@ def test_single_float_value():
         ((), 3.14),
     ]
 
+def test_exponential_float_values():
+    assert _jsonstream('3.14e10') == [
+        ((), 3.14e10),
+    ]
+    assert _jsonstream('-3.14e10') == [
+        ((), -3.14e10),
+    ]
+    assert _jsonstream('-3.14e+10') == [
+        ((), -3.14e+10),
+    ]
+    assert _jsonstream('-3E-10') == [
+        ((), -3E-10),
+    ]
+
 
 def test_single_string_value():
     assert _jsonstream('"foo"') == [
