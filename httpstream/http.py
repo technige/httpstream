@@ -19,6 +19,7 @@
 from __future__ import unicode_literals
 
 from base64 import b64encode
+import errno
 try:
     from http.client import (BadStatusLine, CannotSendRequest, HTTPConnection,
                              HTTPSConnection, HTTPException, ResponseNotReady,
@@ -51,6 +52,20 @@ default_chunk_size = 4096
 log = logging.getLogger(__name__)
 
 redirects = {}
+
+# Since the Python docs state that "symbols that are not used on the current
+# platform are not defined by the module" we have to import error codes
+# cautiously. Error numbers also vary across platforms so we cannot rely on
+# raw numeric values either.
+retry_codes = {}
+if hasattr(errno, "EPIPE"):
+    retry_codes[errno.EPIPE] = "broken pipe"
+if hasattr(errno, "ENETRESET"):
+    retry_codes[errno.ENETRESET] = "network reset"
+if hasattr(errno, "ECONNABORTED"):
+    retry_codes[errno.ECONNABORTED] = "connection aborted"
+if hasattr(errno, "ECONNRESET"):
+    retry_codes[errno.ECONNRESET] = "connection reset"
 
 
 def user_agent(product=None):
@@ -252,18 +267,8 @@ def submit(method, uri, body, headers):
                 code = err.args[0][0]
             else:
                 code = err.args[0]
-            if code == 32:
-                # EPIPE: Broken pipe
-                response = send("broken pipe")
-            elif code == 102:
-                # ENETRESET: Network dropped connection because of reset
-                response = send("network reset")
-            elif code == 103:
-                # ECONNABORTED: Software caused connection abort
-                response = send("connection aborted")
-            elif code == 104:
-                # ECONNRESET: Connection reset by peer
-                response = send("connection reset")
+            if code in retry_codes:
+                response = send(retry_codes[code])
             else:
                 raise
     except (gaierror, herror) as err:
