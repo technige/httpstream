@@ -203,13 +203,27 @@ class Tokeniser(object):
                         src.append(self._read_digit())
                     except (UnexpectedCharacter, EndOfStream):
                         break
-            def read_exp():
-                nonlocal ch, has_exponent 
-                try:
-                    ch = self._peek()
-                except EndOfStream:
-                    return
-                if ch.lower() == 'e':
+            # read fractional part
+            try:
+                ch = self._peek()
+            except EndOfStream:
+                pass
+            else:
+                if ch == '.':
+                    has_fractional_part = True
+                    src.append(self._read())
+                    while True:
+                        try:
+                            src.append(self._read_digit())
+                        except (UnexpectedCharacter, EndOfStream):
+                            break
+            # read exponent
+            try:
+                ch = self._peek()
+            except EndOfStream:
+                pass
+            else:
+                if ch in 'Ee':
                     has_exponent = True
                     src.append(self._read())
                     ch = self._peek()
@@ -220,17 +234,6 @@ class Tokeniser(object):
                             src.append(self._read_digit())
                         except (UnexpectedCharacter, EndOfStream):
                             break
-            read_exp()
-            # read fractional part
-            if ch == '.':
-                has_fractional_part = True
-                src.append(self._read())
-                while True:
-                    try:
-                        src.append(self._read_digit())
-                    except (UnexpectedCharacter, EndOfStream):
-                        break
-            read_exp()
         except AwaitingData:
             # number potentially incomplete: need to wait for
             # further data or end of stream
