@@ -34,6 +34,7 @@ import os
 from socket import error, gaierror, herror, timeout
 from threading import local
 import sys
+from xml.dom.minidom import parseString
 
 from . import __version__
 from .jsonencoder import JSONEncoder
@@ -509,7 +510,8 @@ class Response(object):
         """ Indicates whether or not the content is JSON.
         """
         return self.content_type in ("application/json",
-                                     "application/x-javascript")
+                                     "application/x-javascript",
+                                     "text/json")
 
     @property
     def json(self):
@@ -522,7 +524,7 @@ class Response(object):
 
     @property
     def is_text(self):
-        """ Indicates whether or not the content is text.
+        """ Indicates whether or not the content is plain text.
         """
         return self.content_type.partition("/")[0] == "text"
 
@@ -530,7 +532,7 @@ class Response(object):
     def text(self):
         """ Fetches all content as a string.
         """
-        if not self.is_text:
+        if not self.is_text and not self.is_json and not self.is_xml:
             raise TypeError("Content is not text")
         return self.read().decode(self.encoding)
 
@@ -551,6 +553,21 @@ class Response(object):
             [json.loads(value) for value in line.split("\t")]
             for line in self.read().decode(self.encoding).splitlines()
         ]
+
+    @property
+    def is_xml(self):
+        """ Indicates whether or not the content is XML.
+        """
+        return self.content_type == "application/xml"
+
+    @property
+    def dom(self):
+        """ Fetches all content, decoding from XML and returning as a DOM
+        object.
+        """
+        if not self.is_xml:
+            raise TypeError("Content is not XML")
+        return parseString(self.read().decode(self.encoding))
 
     @property
     def content(self):
