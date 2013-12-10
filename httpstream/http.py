@@ -235,7 +235,7 @@ def submit(method, uri, body, headers):
 
     def send(reconnect=None):
         if reconnect:
-            log.warn("<~> Reconnecting ({0})".format(reconnect))
+            log.debug("<~> Reconnecting ({0})".format(reconnect))
             http.close()
             http.connect()
         if method in ("GET", "DELETE") and not body:
