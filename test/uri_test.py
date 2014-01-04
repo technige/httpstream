@@ -18,8 +18,8 @@
 
 from __future__ import unicode_literals, print_function
 
-from httpstream.uri import (percent_encode, percent_decode, Authority, Path,
-                            Query, URI, URITemplate)
+from httpstream.uri import (percent_encode, percent_decode, _Part,
+                            Authority, Path, Query, URI, URITemplate)
 try:
     from collections import OrderedDict
 except ImportError:
@@ -44,6 +44,16 @@ def test_can_percent_encode_number():
 def test_can_percent_encode_string():
     encoded = percent_encode("foo")
     assert encoded == "foo"
+
+
+def test_can_percent_encode_list():
+    encoded = percent_encode(["knife&fork", "spoon"])
+    assert encoded == "knife%26fork&spoon"
+
+
+def test_can_percent_encode_dictionary():
+    encoded = percent_encode(OrderedDict([("one", 1), ("two", 2)]))
+    assert encoded == "one=1&two=2"
 
 
 def test_can_percent_encode_reserved_chars():
@@ -90,6 +100,19 @@ def test_percent_decoding_partial_extended_chars_will_fail():
     try:
         percent_decode("El%20Ni%C3")
     except UnicodeDecodeError:
+        assert True
+    else:
+        assert False
+
+
+# PART
+
+
+def test_part_string_not_implemented():
+    part = _Part()
+    try:
+        part.string()
+    except NotImplementedError:
         assert True
     else:
         assert False
@@ -173,6 +196,18 @@ def test_authority_inequality():
     assert auth1 != auth2
 
 
+def test_authority_equality_when_none():
+    auth = Authority(None)
+    none = None
+    assert auth == none
+
+
+def test_authority_is_hashable():
+    auth = Authority("alice@example.com:1234")
+    hashed = hash(auth)
+    assert hashed
+
+
 # PATH
 
 
@@ -212,22 +247,70 @@ def test_path_equality():
     assert path1 == path2
 
 
-def test_path_equality():
+def test_path_inequality():
     path1 = Path("/foo/bar")
     path2 = Path("/foo/bar/baz")
     assert path1 != path2
 
 
-def test_can_remove_dot_segments_1():
+def test_path_equality_when_none():
+    path = Path(None)
+    none = None
+    assert path == none
+
+
+def test_path_is_hashable():
+    path = Path("/foo/bar")
+    hashed = hash(path)
+    assert hashed
+
+
+def test_path_has_no_segments_when_none():
+    path = Path(None)
+    segments = list(path.segments)
+    assert segments == []
+
+
+def test_path_is_iterable_as_segments():
+    path = Path("/foo/bar")
+    segments = list(path)
+    assert segments == ["", "foo", "bar"]
+
+
+def test_can_remove_dot_segments_pattern_1():
     path_in = Path("/a/b/c/./../../g")
     path_out = path_in.remove_dot_segments()
     assert path_out == "/a/g"
 
 
-def test_can_remove_dot_segments_2():
+def test_can_remove_dot_segments_pattern_2():
     path_in = Path("mid/content=5/../6")
     path_out = path_in.remove_dot_segments()
     assert path_out == "mid/6"
+
+
+def test_can_remove_dot_segments_when_single_dot():
+    path_in = Path(".")
+    path_out = path_in.remove_dot_segments()
+    assert path_out == ""
+
+
+def test_can_remove_dot_segments_when_double_dot():
+    path_in = Path("..")
+    path_out = path_in.remove_dot_segments()
+    assert path_out == ""
+
+
+def test_can_remove_dot_segments_when_starts_with_single_dot():
+    path_in = Path("./a")
+    path_out = path_in.remove_dot_segments()
+    assert path_out == "a"
+
+
+def test_can_remove_dot_segments_when_starts_with_double_dot():
+    path_in = Path("../a")
+    path_out = path_in.remove_dot_segments()
+    assert path_out == "a"
 
 
 def test_can_add_trailing_slash_to_path():
@@ -383,6 +466,18 @@ def test_query_inequality():
     assert query1 != query2
 
 
+def test_query_equality_when_none():
+    query = Query(None)
+    none = None
+    assert query == none
+
+
+def test_query_is_hashable():
+    query = Query("foo=bar&spam=eggs")
+    hashed = hash(query)
+    assert hashed
+
+
 # URI
 
 
@@ -399,9 +494,11 @@ def test_can_parse_none_uri():
     assert uri.user_info is None
     assert uri.host is None
     assert uri.port is None
+    assert uri.host_port is None
+    assert uri.absolute_path_reference is None
     
 
-def test_can_parse_empty_string():
+def test_can_parse_empty_string_uri():
     uri = URI("")
     assert str(uri) == ""
     assert uri.string == ""
@@ -414,9 +511,10 @@ def test_can_parse_empty_string():
     assert uri.user_info is None
     assert uri.host is None
     assert uri.port is None
+    assert uri.host_port is None
+    assert uri.absolute_path_reference == ""
 
-
-def test_can_parse_absolute_path():
+def test_can_parse_absolute_path_uri():
     uri = URI("/foo/bar")
     assert str(uri) == "/foo/bar"
     assert uri.string == "/foo/bar"
@@ -429,9 +527,11 @@ def test_can_parse_absolute_path():
     assert uri.user_info is None
     assert uri.host is None
     assert uri.port is None
+    assert uri.host_port is None
+    assert uri.absolute_path_reference == "/foo/bar"
 
 
-def test_can_parse_relative_path():
+def test_can_parse_relative_path_uri():
     uri = URI("foo/bar")
     assert str(uri) == "foo/bar"
     assert uri.string == "foo/bar"
@@ -444,6 +544,8 @@ def test_can_parse_relative_path():
     assert uri.user_info is None
     assert uri.host is None
     assert uri.port is None
+    assert uri.host_port is None
+    assert uri.absolute_path_reference == "foo/bar"
 
 
 def test_can_parse_only_query():
@@ -460,6 +562,8 @@ def test_can_parse_only_query():
     assert uri.user_info is None
     assert uri.host is None
     assert uri.port is None
+    assert uri.host_port is None
+    assert uri.absolute_path_reference == "?foo=bar"
 
 
 def test_can_parse_only_fragment():
@@ -475,6 +579,8 @@ def test_can_parse_only_fragment():
     assert uri.user_info is None
     assert uri.host is None
     assert uri.port is None
+    assert uri.host_port is None
+    assert uri.absolute_path_reference == "#foo"
 
 
 def test_can_parse_uri_without_scheme():
@@ -490,6 +596,8 @@ def test_can_parse_uri_without_scheme():
     assert uri.user_info is None
     assert uri.host == "example.com"
     assert uri.port is None
+    assert uri.host_port == "example.com"
+    assert uri.absolute_path_reference == ""
 
 
 def test_can_parse_simple_uri():
@@ -505,6 +613,8 @@ def test_can_parse_simple_uri():
     assert uri.user_info is None
     assert uri.host == "example.com"
     assert uri.port is None
+    assert uri.host_port == "example.com"
+    assert uri.absolute_path_reference == ""
 
 
 def test_can_parse_uri_with_root_path():
@@ -520,6 +630,8 @@ def test_can_parse_uri_with_root_path():
     assert uri.user_info is None
     assert uri.host == "example.com"
     assert uri.port is None
+    assert uri.host_port == "example.com"
+    assert uri.absolute_path_reference == "/"
 
 
 def test_can_parse_full_uri():
@@ -546,7 +658,14 @@ def test_can_parse_full_uri():
     assert uri.user_info == "bob@somewhere"
     assert uri.host == "example.com"
     assert uri.port == 8042
+    assert uri.host_port == "example.com:8042"
     assert uri.absolute_path_reference == "/over/there?name=ferret#nose"
+
+
+def test_uri_representation():
+    uri = URI("http://example.com/")
+    representation = repr(uri)
+    assert representation == "URI('http://example.com/')"
 
 
 def test_uri_equality():
@@ -559,6 +678,37 @@ def test_uri_inequality():
     uri1 = URI("http://example.com/")
     uri2 = URI("http://example.org/")
     assert uri1 != uri2
+
+
+def test_uri_equality_when_none():
+    uri = URI(None)
+    none = None
+    assert uri == none
+
+
+def test_uri_is_hashable():
+    uri = URI("http://example.com/")
+    hashed = hash(uri)
+    assert hashed
+
+
+def test_uri_to_true():
+    uri = URI("http://example.com/")
+    assert uri.__bool__()
+    assert uri.__nonzero__()
+
+
+def test_uri_to_false():
+    uri = URI("")
+    assert not uri.__bool__()
+    assert not uri.__nonzero__()
+
+
+def test_uri_can_be_iterated():
+    uri = URI("http://example.com/")
+    listed = list(uri)
+    assert listed == ['h', 't', 't', 'p', ':', '/', '/', 'e', 'x', 'a', 'm',
+                      'p', 'l', 'e', '.', 'c', 'o', 'm', '/']
 
 
 def _test_references(references):
@@ -647,7 +797,31 @@ def test_can_resolve_without_strict_mode():
     assert uri == "http://a/b/c/g"
 
 
+def test_can_resolve_from_empty_path():
+    base = URI("http://example.com")
+    uri = base.resolve("foo")
+    assert uri == "http://example.com/foo"
+
+
+def test_can_resolve_from_empty_uri():
+    base = URI("")
+    uri = base.resolve("foo")
+    assert uri == "foo"
+
+
+def test_resolving_when_reference_is_none_returns_none():
+    base = URI("http://example.com")
+    uri = base.resolve(None)
+    assert uri is None
+
+
 # URI TEMPLATE
+
+
+def test_expansion_with_no_variables():
+    uri_template = URITemplate("{}")
+    uri = uri_template.expand()
+    assert uri == URI("")
 
 
 def _test_expansions(expansions):
@@ -675,6 +849,13 @@ def _test_expansions(expansions):
         uri_template = URITemplate(template)
         uri = uri_template.expand(**variables)
         assert uri == expansion
+
+
+def test_empty_expansion():
+    _test_expansions({
+        None: None,
+        "": "",
+    })
 
 
 def test_can_expand_simple_strings():
@@ -845,3 +1026,21 @@ def test_uri_template_inequality():
     template1 = URITemplate("http://example.com/data/{foo}")
     template2 = URITemplate("http://example.com/data/{foo}/{bar}")
     assert template1 != template2
+
+
+def test_uri_template_equality_with_string():
+    template = URITemplate("http://example.com/data/{foo}")
+    string = "http://example.com/data/{foo}"
+    assert template == string
+
+
+def test_uri_template_equality_when_none():
+    template = URITemplate(None)
+    none = None
+    assert template == none
+
+
+def test_uri_template_is_hashable():
+    template = URITemplate("http://example.com/data/{foo}")
+    hashed = hash(template)
+    assert hashed

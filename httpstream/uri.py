@@ -889,13 +889,12 @@ class URI(_Part):
         relative_path_reference = Path._cast(relative_path_reference)
         if self._authority is not None and not self._path:
             return Path("/" + str(relative_path_reference))
+        elif "/" in self._path.string:
+            segments = self._path.segments
+            segments[-1] = ""
+            return Path("/".join(segments) + str(relative_path_reference))
         else:
-            if "/" in self._path.string:
-                segments = self._path.segments
-                segments[-1] = ""
-                return Path("/".join(segments) + str(relative_path_reference))
-            else:
-                return relative_path_reference
+            return relative_path_reference
 
     def resolve(self, reference, strict=True):
         """ Transform a reference relative to this URI to produce a full target
