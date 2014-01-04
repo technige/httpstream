@@ -20,6 +20,6 @@ BASE=`dirname $0`
 python $BASE/test/server/application.py &
 PID=$!
 
-py.test --cov-report term-missing --cov httpstream $BASE/test/
+py.test --cov-report term-missing --cov httpstream $BASE/test/ $*
 
 kill $PID
