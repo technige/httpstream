@@ -30,14 +30,14 @@ except ImportError:
                          responses)
 import json
 import logging
-import os
+from os import strerror
 from socket import error, gaierror, herror, timeout
 from threading import local
 import sys
 
 from . import __version__
 from .jsonencoder import JSONEncoder
-from .jsonstream import JSONStream, assembled
+from .jsonstream import JSONStream
 from .numbers import *
 from .uri import URI, URITemplate
 
@@ -101,16 +101,20 @@ class NetworkAddressError(Loggable, IOError):
 
 class SocketError(Loggable, IOError):
 
-    def __init__(self, code, host_port=None):
+    def __init__(self, code, description, host_port=None):
         self._code = code
+        self._description = description
         self._host_port = host_port
-        message = os.strerror(code)
-        IOError.__init__(self, message)
-        Loggable.__init__(self, self.__class__, message)
+        IOError.__init__(self, description)
+        Loggable.__init__(self, self.__class__, description)
 
     @property
     def code(self):
         return self._code
+
+    @property
+    def description(self):
+        return self._description
 
     @property
     def host_port(self):
@@ -275,9 +279,15 @@ def submit(method, uri, body, headers):
         raise NetworkAddressError(err.args[1], host_port=uri.host_port)
     except error as err:
         if isinstance(err.args[0], tuple):
-            code = err.args[0][0]
-        else:
+            code, description = err.args[0]
+        elif isinstance(err.args[0], int):
             code = err.args[0]
+            try:
+                description = strerror(code)
+            except ValueError:
+                description = None
+        else:
+            code, description = None, err.args[0]
         if code == 2:
             # Workaround for Linux bug with incorrect error message on
             # host resolution
@@ -286,7 +296,7 @@ def submit(method, uri, body, headers):
             raise NetworkAddressError("Name or service not known",
                                       host_port=uri.host_port)
         else:
-            raise SocketError(code, host_port=uri.host_port)
+            raise SocketError(code, description, host_port=uri.host_port)
     else:
         return http, response
 
