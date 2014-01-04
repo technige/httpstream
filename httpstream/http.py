@@ -51,6 +51,7 @@ default_encoding = "ISO-8859-1"
 default_chunk_size = 4096
 
 log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 redirects = {}
 
