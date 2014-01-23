@@ -40,7 +40,7 @@ from . import __version__
 from .jsonencoder import JSONEncoder
 from .jsonstream import JSONStream
 from .numbers import *
-from .uri import URI, URITemplate
+from .packages.urimagic import URI, URITemplate
 
 
 __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
