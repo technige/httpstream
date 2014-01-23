@@ -51,7 +51,15 @@ default_encoding = "ISO-8859-1"
 default_chunk_size = 4096
 
 log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
+try:
+    log.addHandler(logging.NullHandler())
+except AttributeError:
+    # This must be Python 2.6, which doesn't have a NullHandler
+    # so we'll have to create one...
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
+    log.addHandler(NullHandler())
 
 redirects = {}
 
