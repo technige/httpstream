@@ -150,55 +150,6 @@ Incremental JSON Parsing
 .. autofunction:: httpstream.grouped
 
 
-URIs
-----
-
-.. autoclass:: httpstream.URI
-    :members:
-    :undoc-members:
-
-.. autoclass:: httpstream.Authority
-    :members:
-    :undoc-members:
-
-.. autoclass:: httpstream.Path
-    :members:
-    :undoc-members:
-
-.. autoclass:: httpstream.Query
-    :members:
-    :undoc-members:
-
-
-URI Templates
--------------
-
-.. autoclass:: httpstream.URITemplate
-    :members:
-    :undoc-members:
-
-.. seealso::
-    `RFC 6570`_
-
-.. _`RFC 6570`: http://tools.ietf.org/html/rfc6570
-
-
-Percent Encoding
-----------------
-
-Percent encoding is used within URI components to allow inclusion of certain
-characters which are not within a permitted set.
-
-.. autofunction:: httpstream.percent_encode
-
-.. autofunction:: httpstream.percent_decode
-
-.. seealso::
-    `RFC 3986 § 2.1`_
-
-.. _`RFC 3986 § 2.1`: http://tools.ietf.org/html/rfc3986#section-2.1
-
-
 Errors
 ------
 
