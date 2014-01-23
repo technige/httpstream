@@ -21,5 +21,8 @@ python $BASE/test/server/application.py &
 PID=$!
 
 py.test --cov-report term-missing --cov httpstream $BASE/test/ $*
+EXIT_STATUS=$?
 
 kill $PID
+
+exit $EXIT_STATUS
