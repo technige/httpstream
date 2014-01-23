@@ -3,6 +3,8 @@ python:
   - "2.6"
   - "2.7"
   - "3.3"
-
+# install test requirements
+install:
+  - pip install pytest-cov
 # run tests
 script: ./runtests.sh
