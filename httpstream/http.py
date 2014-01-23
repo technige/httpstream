@@ -47,13 +47,13 @@ __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
            "Response", "Redirection", "ClientError", "ServerError", "Resource",
            "ResourceTemplate", "get", "put", "post", "delete", "head"]
 
-default_encoding = "ISO-8859-1"
-default_chunk_size = 4096
-
-http_classes = {
+connection_classes = {
     "http": HTTPConnection,
     "https": HTTPSConnection,
 }
+
+default_encoding = "ISO-8859-1"
+default_chunk_size = 4096
 
 log = logging.getLogger(__name__)
 try:
@@ -149,46 +149,48 @@ class ConnectionPuddle(local):
     necessary; after use, these must be released.
     """
 
-    def __init__(self, scheme, host_port):
+    def __init__(self, connection_class, host_port):
         local.__init__(self)
-        self._scheme = scheme
-        self._host_port = host_port
-        self._active = []
-        self._passive = []
+        self.__connection_class = connection_class
+        self.__host_port = host_port
+        self.__active = []
+        self.__passive = []
 
     @property
     def host_port(self):
-        return self._host_port
+        return self.__host_port
 
     @property
-    def scheme(self):
-        return self._scheme
+    def connection_class(self):
+        return self.__connection_class
 
     def __repr__(self):
-        return "({0}://{1} active={2} passive={3})".format(
-            self.scheme, self.host_port, len(self._active), len(self._passive))
+        return "<{0}({1}) active={2} passive={3}>".format(
+            self.__connection_class.__name__, repr(self.host_port),
+            len(self.__active), len(self.__passive)
+        )
 
     def __hash__(self):
-        return hash((self.scheme, self.host_port))
+        return hash((self.__connection_class, self.host_port))
 
     def __len__(self):
-        return len(self._active) + len(self._passive)
+        return len(self.__active) + len(self.__passive)
 
     def acquire(self):
-        if self._passive:
-            connection = self._passive.pop()
+        if self.__passive:
+            connection = self.__passive.pop()
         else:
-            connection = http_classes[self.scheme](self.host_port)
-        self._active.append(connection)
+            connection = self.__connection_class(self.host_port)
+        self.__active.append(connection)
         return connection
 
     def release(self, connection):
         try:
-            self._active.remove(connection)
+            self.__active.remove(connection)
         except ValueError:
             pass
-        if len(self._passive) < 2:
-            self._passive.append(connection)
+        if len(self.__passive) < 2:
+            self.__passive.append(connection)
         else:
             connection.close()
 
@@ -201,34 +203,20 @@ class ConnectionPool(object):
     _puddles = {}
 
     @classmethod
-    def _get_puddle(cls, scheme, host_port):
-        if ":" in host_port:
-            key = (scheme, host_port)
-        elif scheme == "https":
-            key = (scheme, host_port + ":" + str(HTTPS_PORT))
-        elif scheme == "http":
-            key = (scheme, host_port + ":" + str(HTTP_PORT))
-        else:
-            raise ValueError("Unknown scheme " + repr(scheme))
+    def _get_puddle(cls, connection_class, host_port):
+        key = (connection_class, host_port)
         if key not in cls._puddles:
-            cls._puddles[key] = ConnectionPuddle(scheme, host_port)
+            cls._puddles[key] = ConnectionPuddle(connection_class, host_port)
         return cls._puddles[key]
 
     @classmethod
     def acquire(cls, scheme, host_port):
-        puddle = cls._get_puddle(scheme, host_port)
+        puddle = cls._get_puddle(connection_classes[scheme], host_port)
         return puddle.acquire()
 
     @classmethod
     def release(cls, connection):
-        if isinstance(connection, http_classes["https"]):
-            schema = "https"
-        elif isinstance(connection, http_classes["http"]):
-            schema = "http"
-        else:
-            raise TypeError("Unknown connection type " +
-                            repr(connection.__class__))
-        puddle = cls._get_puddle(schema, "{0}:{1}".format(
+        puddle = cls._get_puddle(connection.__class__, "{0}:{1}".format(
             connection.host, connection.port))
         puddle.release(connection)
 
