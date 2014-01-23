@@ -7,7 +7,7 @@ support for incremental JSON document retrieval.
 
 ## Installation
 
-HTTPStream is hosted on PyPI and so to install, simply use ``pip``::
+HTTPStream is hosted on PyPI and so to install, simply use `pip`:
 
 ```python
 pip install httpstream
