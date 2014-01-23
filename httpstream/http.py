@@ -50,6 +50,11 @@ __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
 default_encoding = "ISO-8859-1"
 default_chunk_size = 4096
 
+http_classes = {
+    "http": HTTPConnection,
+    "https": HTTPSConnection,
+}
+
 log = logging.getLogger(__name__)
 try:
     log.addHandler(logging.NullHandler())
@@ -144,11 +149,6 @@ class ConnectionPuddle(local):
     necessary; after use, these must be released.
     """
 
-    _http_classes = {
-        "http": HTTPConnection,
-        "https": HTTPSConnection,
-    }
-
     def __init__(self, scheme, host_port):
         local.__init__(self)
         self._scheme = scheme
@@ -178,7 +178,7 @@ class ConnectionPuddle(local):
         if self._passive:
             connection = self._passive.pop()
         else:
-            connection = self._http_classes[self.scheme](self.host_port)
+            connection = http_classes[self.scheme](self.host_port)
         self._active.append(connection)
         return connection
 
@@ -221,9 +221,9 @@ class ConnectionPool(object):
 
     @classmethod
     def release(cls, connection):
-        if isinstance(connection, HTTPSConnection):
+        if isinstance(connection, http_classes["https"]):
             schema = "https"
-        elif isinstance(connection, HTTPConnection):
+        elif isinstance(connection, http_classes["http"]):
             schema = "http"
         else:
             raise TypeError("Unknown connection type " +
