@@ -30,11 +30,14 @@ from ..http import connection_classes
 
 class MockHTTPConnection(object):
 
+    default_port = 80
     response = None
     scheme = "http"
 
     def __init__(self, host, port=None, strict=None, timeout=None,
                  source_address=None):
+        self.host = host
+        self.port = int(port or self.default_port)
         self.__method = None
         self.__uri = URI.build(scheme=self.scheme, host=host, port=port)
 
