@@ -31,18 +31,22 @@ def assert_response_ok(response):
     assert_response(response, 200, "OK")
 
 
-def test_mocked_connection_context():
+def test_static_response():
+    with MockedConnection(lambda method, uri: MockHTTPResponse()):
+        assert_response_ok(get("http://example.com/"))
+
+
+def test_list_of_responses():
     responses = [MockHTTPResponse()]
-    with MockedConnection(responses):
+    with MockedConnection(lambda method, uri: responses.pop(0)):
         assert_response_ok(get("http://example.com/"))
 
 
 def test_subsequent_mocked_connection_contexts():
-    responses = [MockHTTPResponse()]
-    with MockedConnection(responses):
+    static_responder = lambda method, uri: MockHTTPResponse()
+    with MockedConnection(static_responder):
         assert_response_ok(get("http://example.com/"))
-    responses = [MockHTTPResponse()]
-    with MockedConnection(responses):
+    with MockedConnection(static_responder):
         assert_response_ok(get("http://example.com/"))
 
 
@@ -54,14 +58,21 @@ def test_multiple_responses():
         MockHTTPResponse(),
         MockHTTPResponse(),
     ]
-    with MockedConnection(responses):
+    with MockedConnection(lambda method, uri: responses.pop(0)):
         while responses:
             assert_response_ok(get("http://example.com/"))
 
 
-def test_missing_response_returns_503():
+def test_returning_503_on_missing_response():
     responses = []
-    with MockedConnection(responses):
+
+    def responder(method, uri):
+        try:
+            return responses.pop(0)
+        except IndexError:
+            return MockHTTPResponse(503)
+
+    with MockedConnection(responder):
         try:
             get("http://example.com/")
         except ServerError as error:
@@ -70,15 +81,22 @@ def test_missing_response_returns_503():
             assert False
 
 
-def test_single_response_will_be_repeated():
-    with MockedConnection(MockHTTPResponse()):
-        for i in range(5):
-            assert_response_ok(get("http://example.com/"))
-
-
 def test_response_dictionary():
     responses = {
         ("GET", "http://example.com/"): MockHTTPResponse(),
     }
-    with MockedConnection(responses):
+
+    def responder(method, uri):
+        try:
+            return responses[(method, uri)]
+        except KeyError:
+            return MockHTTPResponse(503)
+
+    with MockedConnection(responder):
         assert_response_ok(get("http://example.com/"))
+        try:
+            get("http://nowhere.net/")
+        except ServerError as error:
+            assert_response(error, 503, "Service Unavailable")
+        else:
+            assert False

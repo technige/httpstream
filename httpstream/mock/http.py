@@ -29,10 +29,14 @@ from ..http import connection_classes
 
 
 class MockHTTPConnection(object):
+    # TODO: add logging
 
     default_port = 80
-    response = None
     scheme = "http"
+
+    @staticmethod
+    def responder(method, uri):
+        pass
 
     def __init__(self, host, port=None, strict=None, timeout=None,
                  source_address=None):
@@ -52,26 +56,7 @@ class MockHTTPConnection(object):
         self.__uri = self.__uri.resolve(url)
 
     def getresponse(self):
-        response = self.response
-        if not response:
-            return MockHTTPResponse(503)
-        elif isinstance(response, MockHTTPResponse):
-            return response
-        elif isinstance(response, list):
-            try:
-                return response.pop(0)
-            except IndexError:
-                return MockHTTPResponse(503)
-        elif isinstance(response, dict):
-            try:
-                # TODO: make the key matching more comprehensive
-                method_uri = (self.__method, self.__uri.string)
-                return response[method_uri]
-            except KeyError:
-                return MockHTTPResponse(503)
-        else:
-            raise TypeError("Unusable response type "
-                            "{0}".format(response.__class__))
+        return self.__class__.responder(self.__method, self.__uri.string)
 
 
 class MockHTTPResponse(object):
@@ -81,7 +66,7 @@ class MockHTTPResponse(object):
         self.reason = httplib.responses[self.status]
         self.headers = headers or {}
         self.headers.setdefault("Content-Type", "text/plain")
-        self.__body = bytearray(content or b"")
+        self.__body = bytearray(content or b"")  # TODO: content types
 
     def getheader(self, name, default=None):
         headers = self.headers.get(name) or default
@@ -91,15 +76,15 @@ class MockHTTPResponse(object):
         return list(self.headers.items())
 
     def read(self, size=None):
-        return self.__body
+        return self.__body  # TODO
 
 
 class MockedConnection(object):
 
-    def __init__(self, response):
+    def __init__(self, responder):
         self.__mock_http_class = type(str("MockHTTPConnection"),
                                       (MockHTTPConnection,),
-                                      {"response": response})
+                                      {"responder": responder})
         self.__original_connection_classes = {}
         self.__mocked_connection_classes = {
             "http": self.__mock_http_class,

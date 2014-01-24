@@ -23,8 +23,7 @@ from httpstream.mock.http import MockedConnection, MockHTTPResponse
 
 
 def test_mocked_connection_context_followed_by_normal_connection():
-    responses = [MockHTTPResponse()]
-    with MockedConnection(responses):
+    with MockedConnection(lambda method, uri: MockHTTPResponse()):
         response = get("http://example.com/")
         assert response.status_code == 200
         assert response.reason == "OK"
