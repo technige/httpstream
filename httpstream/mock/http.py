@@ -97,7 +97,7 @@ class MockHTTPResponse(object):
 class MockedConnection(object):
 
     def __init__(self, response):
-        self.__mock_http_class = type("MockHTTPConnection",
+        self.__mock_http_class = type(str("MockHTTPConnection"),
                                       (MockHTTPConnection,),
                                       {"response": response})
         self.__original_connection_classes = {}
