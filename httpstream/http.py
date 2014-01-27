@@ -518,6 +518,7 @@ class Response(object):
         """
         return self.content_type in ("application/json",
                                      "application/x-javascript",
+                                     "text/javascript",
                                      "text/json")
 
     @property
