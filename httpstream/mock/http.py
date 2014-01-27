@@ -28,22 +28,30 @@ from httpstream.packages.urimagic import URI
 from ..http import connection_classes
 
 
+__all__ = ["MockConnection", "MockRequest", "MockResponse"]
+
+DEFAULT_ENCODING = "UTF-8"
+
+
 class MockHTTPConnection(object):
+    """ Emulates the HTTPConnection object from the standard library.
+    """
+
     # TODO: add logging
 
-    default_port = 80
+    default_port = httplib.HTTP_PORT
     scheme = "http"
 
     @staticmethod
-    def responder(method, uri):
+    def responder(request):
         pass
 
     def __init__(self, host, port=None, strict=None, timeout=None,
                  source_address=None):
         self.host = host
         self.port = int(port or self.default_port)
-        self.__method = None
         self.__uri = URI.build(scheme=self.scheme, host=host, port=port)
+        self.__request = None
 
     def connect(self):
         pass
@@ -52,21 +60,49 @@ class MockHTTPConnection(object):
         pass
 
     def request(self, method, url, body=None, headers=None):
-        self.__method = method
         self.__uri = self.__uri.resolve(url)
+        self.__request = MockRequest(method, self.__uri.string, body, headers)
 
     def getresponse(self):
-        return self.__class__.responder(self.__method, self.__uri.string)
+        return self.__class__.responder(self.__request)
 
 
-class MockHTTPResponse(object):
+class MockHTTPSConnection(MockHTTPConnection):
+    """ Emulates the HTTPSConnection object from the standard library.
+    """
 
-    def __init__(self, status_code=200, content=None, headers=None):
-        self.status = status_code or 200
+    default_port = httplib.HTTPS_PORT
+    scheme = "https"
+
+
+class MockRequest(object):
+    """ Container for arguments passed to the HTTPConnection.request method.
+    """
+
+    def __init__(self, method, url, body=None, headers=None):
+        self.method = method
+        self.url = url
+        if body:
+            self.body = bytes(body.encode(DEFAULT_ENCODING))
+        else:
+            self.body = bytes()
+        self.headers = headers  # todo
+
+
+class MockResponse(object):
+    """ Emulates the HTTPResponse object from the standard library, also
+    allowing construction of emulated responses.
+    """
+
+    def __init__(self, status=200, body=None, headers=None):
+        self.status = status or 200
         self.reason = httplib.responses[self.status]
+        if body:
+            self.__body = bytearray(body.encode(DEFAULT_ENCODING))  # TODO: content types
+        else:
+            self.__body = bytearray()
         self.headers = headers or {}
         self.headers.setdefault("Content-Type", "text/plain")
-        self.__body = bytearray(content or b"")  # TODO: content types
 
     def getheader(self, name, default=None):
         headers = self.headers.get(name) or default
@@ -76,19 +112,25 @@ class MockHTTPResponse(object):
         return list(self.headers.items())
 
     def read(self, size=None):
-        return self.__body  # TODO
+        if size is None:
+            size = len(self.__body)
+        part, self.__body = self.__body[:size], self.__body[size:]
+        return part
 
 
-class MockedConnection(object):
+class MockConnection(object):
+    """ Context manager for Mock HTTP/HTTPS connections.
+    """
 
     def __init__(self, responder):
-        self.__mock_http_class = type(str("MockHTTPConnection"),
-                                      (MockHTTPConnection,),
-                                      {"responder": staticmethod(responder)})
         self.__original_connection_classes = {}
         self.__mocked_connection_classes = {
-            "http": self.__mock_http_class,
-            "https": self.__mock_http_class,  # TODO: make a proper HTTPS one
+            "http": type(MockHTTPConnection.__class__.__name__,
+                         (MockHTTPConnection,),
+                         {"responder": staticmethod(responder)}),
+            "https": type(MockHTTPSConnection.__class__.__name__,
+                          (MockHTTPSConnection,),
+                          {"responder": staticmethod(responder)}),
         }
 
     def __enter__(self):

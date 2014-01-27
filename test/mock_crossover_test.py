@@ -19,11 +19,11 @@
 from __future__ import unicode_literals
 
 from httpstream import get
-from httpstream.mock.http import MockedConnection, MockHTTPResponse
+from httpstream.mock import MockConnection, MockResponse
 
 
 def test_mocked_connection_context_followed_by_normal_connection():
-    with MockedConnection(lambda method, uri: MockHTTPResponse()):
+    with MockConnection(lambda request: MockResponse()):
         response = get("http://example.com/")
         assert response.status_code == 200
         assert response.reason == "OK"

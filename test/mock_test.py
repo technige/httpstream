@@ -19,7 +19,7 @@
 from __future__ import unicode_literals
 
 from httpstream import get, ServerError
-from httpstream.mock.http import MockedConnection, MockHTTPResponse
+from httpstream.mock import MockConnection, MockResponse
 
 
 def assert_response(response, status_code, reason):
@@ -32,33 +32,33 @@ def assert_response_ok(response):
 
 
 def test_static_response():
-    with MockedConnection(lambda method, uri: MockHTTPResponse()):
+    with MockConnection(lambda request: MockResponse()):
         assert_response_ok(get("http://example.com/"))
 
 
 def test_list_of_responses():
-    responses = [MockHTTPResponse()]
-    with MockedConnection(lambda method, uri: responses.pop(0)):
+    responses = [MockResponse()]
+    with MockConnection(lambda request: responses.pop(0)):
         assert_response_ok(get("http://example.com/"))
 
 
 def test_subsequent_mocked_connection_contexts():
-    static_responder = lambda method, uri: MockHTTPResponse()
-    with MockedConnection(static_responder):
+    static_responder = lambda request: MockResponse()
+    with MockConnection(static_responder):
         assert_response_ok(get("http://example.com/"))
-    with MockedConnection(static_responder):
+    with MockConnection(static_responder):
         assert_response_ok(get("http://example.com/"))
 
 
 def test_multiple_responses():
     responses = [
-        MockHTTPResponse(),
-        MockHTTPResponse(),
-        MockHTTPResponse(),
-        MockHTTPResponse(),
-        MockHTTPResponse(),
+        MockResponse(),
+        MockResponse(),
+        MockResponse(),
+        MockResponse(),
+        MockResponse(),
     ]
-    with MockedConnection(lambda method, uri: responses.pop(0)):
+    with MockConnection(lambda request: responses.pop(0)):
         while responses:
             assert_response_ok(get("http://example.com/"))
 
@@ -66,13 +66,13 @@ def test_multiple_responses():
 def test_returning_503_on_missing_response():
     responses = []
 
-    def responder(method, uri):
+    def responder(request):
         try:
             return responses.pop(0)
         except IndexError:
-            return MockHTTPResponse(503)
+            return MockResponse(503)
 
-    with MockedConnection(responder):
+    with MockConnection(responder):
         try:
             get("http://example.com/")
         except ServerError as error:
@@ -83,16 +83,16 @@ def test_returning_503_on_missing_response():
 
 def test_response_dictionary():
     responses = {
-        ("GET", "http://example.com/"): MockHTTPResponse(),
+        ("GET", "http://example.com/"): MockResponse(),
     }
 
-    def responder(method, uri):
+    def responder(request):
         try:
-            return responses[(method, uri)]
+            return responses[(request.method, request.url)]
         except KeyError:
-            return MockHTTPResponse(503)
+            return MockResponse(503)
 
-    with MockedConnection(responder):
+    with MockConnection(responder):
         assert_response_ok(get("http://example.com/"))
         try:
             get("http://nowhere.net/")
