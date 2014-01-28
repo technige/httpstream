@@ -22,6 +22,7 @@ try:
     import http.client as httplib
 except ImportError:
     import httplib
+import json
 
 from httpstream.packages.urimagic import URI
 
@@ -88,6 +89,10 @@ class MockRequest(object):
             self.body = bytes()
         self.headers = headers  # todo
 
+    @property
+    def uri(self):
+        return URI(self.url)
+
 
 class MockResponse(object):
     """ Emulates the HTTPResponse object from the standard library, also
@@ -97,11 +102,15 @@ class MockResponse(object):
     def __init__(self, status=200, body=None, headers=None):
         self.status = status or 200
         self.reason = httplib.responses[self.status]
-        if body:
+        self.headers = headers or {}
+        if isinstance(body, dict):
+            self.__body = bytearray(json.dumps(body).encode(DEFAULT_ENCODING))
+            self.headers.setdefault("Content-Type", "application/json; charset=" + DEFAULT_ENCODING)
+        elif body:
             self.__body = bytearray(body.encode(DEFAULT_ENCODING))  # TODO: content types
         else:
             self.__body = bytearray()
-        self.headers = headers or {}
+        self.headers.setdefault("Content-Length", len(self.__body))
         self.headers.setdefault("Content-Type", "text/plain")
 
     def getheader(self, name, default=None):
