@@ -41,6 +41,7 @@ from .jsonencoder import JSONEncoder
 from .jsonstream import JSONStream
 from .numbers import *
 from .packages.urimagic import URI, URITemplate
+from .packages.urimagic.kvlist import KeyValueList  # no point in another copy
 
 
 __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
@@ -388,6 +389,7 @@ class Response(object):
         self._request = request
         self._response = response
         self._reason = kwargs.get("reason")
+        self.__headers = KeyValueList(self._response.getheaders())
         #: Default chunk size for this response
         self.chunk_size = kwargs.get("chunk_size", default_chunk_size)
         log.info("<<< {0}".format(self))
@@ -470,7 +472,7 @@ class Response(object):
     def headers(self):
         """ The response headers.
         """
-        return self._response.getheaders()
+        return self.__headers
 
     @property
     def content_length(self):

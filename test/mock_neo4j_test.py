@@ -30,6 +30,7 @@ EXTENSIONS_INFO = URITemplate("{+base}/db/data/ext")
 MANAGEMENT = URITemplate("{+base}/db/manage/")
 NODE = URITemplate("{+base}/db/data/node")
 NODE_INDEX = URITemplate("{+base}/db/data/index/node")
+NODE_SELF = URITemplate("{+base}/db/data/node/{id}")
 RELATIONSHIP_INDEX = URITemplate("{+base}/db/data/index/relationship")
 RELATIONSHIP_TYPES = URITemplate("{+base}/db/data/relationship/types")
 TRANSACTION = URITemplate("{+base}/db/data/transaction")
@@ -62,6 +63,7 @@ def get_data_responder(request, version):
 def post_node_responder(request):
     base = URI.build(scheme=request.uri.scheme, host_port=request.uri.host_port)
     # TODO: make these templates
+    id = 1033
     return MockResponse(status=201, body={
         "extensions": {},
         "paged_traverse": "http://localhost:7474/db/data/node/1033/paged/traverse/{returnType}{?pageSize,leaseTime}",
@@ -71,7 +73,7 @@ def post_node_responder(request):
         "all_typed_relationships": "http://localhost:7474/db/data/node/1033/relationships/all/{-list|&|types}",
         "property": "http://localhost:7474/db/data/node/1033/properties/{key}",
         "all_relationships": "http://localhost:7474/db/data/node/1033/relationships/all",
-        "self": "http://localhost:7474/db/data/node/1033",
+        "self": NODE_SELF.expand(base=base, id=id).string,
         "properties": "http://localhost:7474/db/data/node/1033/properties",
         "outgoing_typed_relationships": "http://localhost:7474/db/data/node/1033/relationships/out/{-list|&|types}",
         "incoming_relationships": "http://localhost:7474/db/data/node/1033/relationships/in",
@@ -144,23 +146,37 @@ def test_can_get_database_root():
 
 def test_can_post_node():
     with MockNeo4j():
+        # TODO: add properties
         response = post("http://localhost:7474/db/data/node")
         assert response.is_json
         assert response.content == {
             "extensions": {},
-            "paged_traverse": "http://localhost:7474/db/data/node/1033/paged/traverse/{returnType}{?pageSize,leaseTime}",
+            "paged_traverse": "http://localhost:7474/db/data/node/1033/paged/"
+                              "traverse/{returnType}{?pageSize,leaseTime}",
             "labels": "http://localhost:7474/db/data/node/1033/labels",
-            "outgoing_relationships": "http://localhost:7474/db/data/node/1033/relationships/out",
-            "traverse": "http://localhost:7474/db/data/node/1033/traverse/{returnType}",
-            "all_typed_relationships": "http://localhost:7474/db/data/node/1033/relationships/all/{-list|&|types}",
-            "property": "http://localhost:7474/db/data/node/1033/properties/{key}",
-            "all_relationships": "http://localhost:7474/db/data/node/1033/relationships/all",
+            "outgoing_relationships": "http://localhost:7474/db/data/node/"
+                                      "1033/relationships/out",
+            "traverse": "http://localhost:7474/db/data/node/1033/"
+                        "traverse/{returnType}",
+            "all_typed_relationships": "http://localhost:7474/db/data/node/"
+                                       "1033/relationships/all/{-list|&|types}",
+            "property": "http://localhost:7474/db/data/node/1033/"
+                        "properties/{key}",
+            "all_relationships": "http://localhost:7474/db/data/node/1033/"
+                                 "relationships/all",
             "self": "http://localhost:7474/db/data/node/1033",
             "properties": "http://localhost:7474/db/data/node/1033/properties",
-            "outgoing_typed_relationships": "http://localhost:7474/db/data/node/1033/relationships/out/{-list|&|types}",
-            "incoming_relationships": "http://localhost:7474/db/data/node/1033/relationships/in",
-            "incoming_typed_relationships": "http://localhost:7474/db/data/node/1033/relationships/in/{-list|&|types}",
-            "create_relationship": "http://localhost:7474/db/data/node/1033/relationships",
+            "outgoing_typed_relationships": "http://localhost:7474/db/data/"
+                                            "node/1033/relationships/"
+                                            "out/{-list|&|types}",
+            "incoming_relationships": "http://localhost:7474/db/data/node/"
+                                      "1033/relationships/in",
+            "incoming_typed_relationships": "http://localhost:7474/db/data/"
+                                            "node/1033/relationships/"
+                                            "in/{-list|&|types}",
+            "create_relationship": "http://localhost:7474/db/data/node/"
+                                   "1033/relationships",
             "data": {}
         }
-        #assert response.headers.get("Location") == "http://localhost:7474/db/data/node/1033"
+        headers = dict(response.headers)
+        assert headers["Location"] == "http://localhost:7474/db/data/node/1033"
