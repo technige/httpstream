@@ -27,6 +27,14 @@ try:
 except ImportError:
     from distutils.core import setup
 
+# Attempt to compile jsonstream if Cython is available
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    ext_modules = None
+else:
+    ext_modules = cythonize("httpstream/jsonstream.py")
+
 from httpstream import __author__, __email__, __license__, __version__
 
 
@@ -40,6 +48,9 @@ setup(
     url="https://httpstream.readthedocs.org/",
     packages=[
         "httpstream",
+        "httpstream.mock",
+        "httpstream.packages",
+        "httpstream.packages.urimagic",
     ],
     install_requires=[
     ],
@@ -55,4 +66,6 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Software Development",
     ],
+    ext_modules=ext_modules,
+    zip_safe=False,
 )

@@ -5,6 +5,9 @@
 # C extensions
 *.so
 
+# C files compiled by Cython
+*.c
+
 # Packages
 *.egg
 *.egg-info
