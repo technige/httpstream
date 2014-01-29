@@ -23,64 +23,56 @@ from httpstream.mock import MockConnection, MockResponse
 from httpstream.packages.urimagic import URI, URITemplate
 
 
-BATCH = URITemplate("{+base}/db/data/batch")
-CYPHER = URITemplate("{+base}/db/data/cypher")
-DATA = URITemplate("{+base}/db/data/")
-EXTENSIONS_INFO = URITemplate("{+base}/db/data/ext")
-MANAGEMENT = URITemplate("{+base}/db/manage/")
-NODE = URITemplate("{+base}/db/data/node")
-NODE_INDEX = URITemplate("{+base}/db/data/index/node")
-NODE_SELF = URITemplate("{+base}/db/data/node/{id}")
-RELATIONSHIP_INDEX = URITemplate("{+base}/db/data/index/relationship")
-RELATIONSHIP_TYPES = URITemplate("{+base}/db/data/relationship/types")
-TRANSACTION = URITemplate("{+base}/db/data/transaction")
+DATA = URITemplate("{+base}/db/data")
+MANAGEMENT = URITemplate("{+base}/db/manage")
+NODE = URITemplate("{+base}/db/data/node/{id}")
 
 
 def get_service_root_responder(request):
     base = URI.build(scheme=request.uri.scheme, host_port=request.uri.host_port)
     return MockResponse(body={
-        "management": MANAGEMENT.expand(base=base).string,
-        "data": DATA.expand(base=base).string,
+        "management": MANAGEMENT.expand(base=base).string + "/",
+        "data": DATA.expand(base=base).string + "/",
     })
 
 
 def get_data_responder(request, version):
     base = URI.build(scheme=request.uri.scheme, host_port=request.uri.host_port)
+    data_uri = DATA.expand(base=base).string
     return MockResponse(body={
         "extensions": {},
-        "node": NODE.expand(base=base).string,
-        "node_index": NODE_INDEX.expand(base=base).string,
-        "relationship_index": RELATIONSHIP_INDEX.expand(base=base).string,
-        "extensions_info": EXTENSIONS_INFO.expand(base=base).string,
-        "relationship_types": RELATIONSHIP_TYPES.expand(base=base).string,
-        "batch": BATCH.expand(base=base).string,
-        "cypher": CYPHER.expand(base=base).string,
-        "transaction": TRANSACTION.expand(base=base).string,
+        "node": data_uri + "/node",
+        "node_index": data_uri + "/index/node",
+        "relationship_index": data_uri + "/index/relationship",
+        "extensions_info": data_uri + "/ext",
+        "relationship_types": data_uri + "/relationship/types",
+        "batch": data_uri + "/batch",
+        "cypher": data_uri + "/cypher",
+        "transaction": data_uri + "/transaction",
         "neo4j_version": version,
     })
 
 
 def post_node_responder(request):
     base = URI.build(scheme=request.uri.scheme, host_port=request.uri.host_port)
-    # TODO: make these templates
-    id = 1033
+    node_uri = NODE.expand(base=base, id=1033).string
     return MockResponse(status=201, body={
         "extensions": {},
-        "paged_traverse": "http://localhost:7474/db/data/node/1033/paged/traverse/{returnType}{?pageSize,leaseTime}",
-        "labels": "http://localhost:7474/db/data/node/1033/labels",
-        "outgoing_relationships": "http://localhost:7474/db/data/node/1033/relationships/out",
-        "traverse": "http://localhost:7474/db/data/node/1033/traverse/{returnType}",
-        "all_typed_relationships": "http://localhost:7474/db/data/node/1033/relationships/all/{-list|&|types}",
-        "property": "http://localhost:7474/db/data/node/1033/properties/{key}",
-        "all_relationships": "http://localhost:7474/db/data/node/1033/relationships/all",
-        "self": NODE_SELF.expand(base=base, id=id).string,
-        "properties": "http://localhost:7474/db/data/node/1033/properties",
-        "outgoing_typed_relationships": "http://localhost:7474/db/data/node/1033/relationships/out/{-list|&|types}",
-        "incoming_relationships": "http://localhost:7474/db/data/node/1033/relationships/in",
-        "incoming_typed_relationships": "http://localhost:7474/db/data/node/1033/relationships/in/{-list|&|types}",
-        "create_relationship": "http://localhost:7474/db/data/node/1033/relationships",
+        "paged_traverse": node_uri + "/paged/traverse/{returnType}{?pageSize,leaseTime}",
+        "labels": node_uri + "/labels",
+        "outgoing_relationships": node_uri + "/relationships/out",
+        "traverse": node_uri + "/traverse/{returnType}",
+        "all_typed_relationships": node_uri + "/relationships/all/{-list|&|types}",
+        "property": node_uri + "/properties/{key}",
+        "all_relationships": node_uri + "/relationships/all",
+        "self": node_uri,
+        "properties": node_uri + "/properties",
+        "outgoing_typed_relationships": node_uri + "/relationships/out/{-list|&|types}",
+        "incoming_relationships": node_uri + "/relationships/in",
+        "incoming_typed_relationships": node_uri + "/relationships/in/{-list|&|types}",
+        "create_relationship": node_uri + "/relationships",
         "data": {}
-    }, headers={"Location": "http://localhost:7474/db/data/node/1033"})
+    }, headers={"Location": node_uri})
 
 
 def neo4j_2_0_0_responder(request):
