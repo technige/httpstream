@@ -6,8 +6,6 @@ python:
 # install requirements
 install:
   - "pip install -r requirements.txt"
-# install test requirements
-install:
   - "pip install pytest-cov"
 # run tests
 script: ./runtests.sh
