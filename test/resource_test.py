@@ -18,8 +18,9 @@
 
 from __future__ import unicode_literals
 
+from urimagic import URI, URITemplate
+
 from httpstream import Resource, NetworkAddressError, SocketError, ResourceTemplate
-from httpstream.packages.urimagic import URI, URITemplate
 
 
 def test_bad_hostname_will_fail():

@@ -24,7 +24,7 @@ except ImportError:
     import httplib
 import json
 
-from httpstream.packages.urimagic import URI
+from urimagic import URI
 
 from ..http import connection_classes
 

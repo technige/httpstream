@@ -24,16 +24,10 @@ incremental receipt and handling of web content.
 
 try:
     from setuptools import setup
+    from setuptools.extension import Extension
 except ImportError:
     from distutils.core import setup
-
-# Attempt to compile jsonstream if Cython is available
-try:
-    from Cython.Build import cythonize
-except ImportError:
-    ext_modules = None
-else:
-    ext_modules = cythonize("httpstream/jsonstream.py")
+    from distutils.extension import Extension
 
 from httpstream import __author__, __email__, __license__, __version__
 
@@ -49,8 +43,6 @@ setup(
     packages=[
         "httpstream",
         "httpstream.mock",
-        "httpstream.packages",
-        "httpstream.packages.urimagic",
     ],
     install_requires=[
     ],
@@ -60,12 +52,11 @@ setup(
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.3",
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Software Development",
     ],
-    ext_modules=ext_modules,
+    ext_modules=extensions,
     zip_safe=False,
 )

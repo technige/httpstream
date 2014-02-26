@@ -36,12 +36,13 @@ from threading import local
 import sys
 from xml.dom.minidom import parseString
 
+from jsonstream import JSONStream
+from urimagic import URI, URITemplate
+from urimagic.kvlist import KeyValueList  # no point in another copy
+
 from . import __version__
 from .jsonencoder import JSONEncoder
-from .jsonstream import JSONStream
 from .numbers import *
-from .packages.urimagic import URI, URITemplate
-from .packages.urimagic.kvlist import KeyValueList  # no point in another copy
 
 
 __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
@@ -57,15 +58,7 @@ default_encoding = "ISO-8859-1"
 default_chunk_size = 4096
 
 log = logging.getLogger(__name__)
-try:
-    log.addHandler(logging.NullHandler())
-except AttributeError:
-    # This must be Python 2.6, which doesn't have a NullHandler
-    # so we'll have to create one...
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
-    log.addHandler(NullHandler())
+log.addHandler(logging.NullHandler())
 
 redirects = {}
 

@@ -18,9 +18,10 @@
 
 from __future__ import unicode_literals
 
+from urimagic import URI, URITemplate
+
 from httpstream import get, put, post, delete
 from httpstream.mock import MockConnection, MockResponse
-from httpstream.packages.urimagic import URI, URITemplate
 
 
 DATA = URITemplate("{+base}/db/data")
