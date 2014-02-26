@@ -108,6 +108,8 @@ if hasattr(errno, "ECONNABORTED"):
 if hasattr(errno, "ECONNRESET"):
     retry_codes[errno.ECONNRESET] = "connection reset"
 
+supports_buffering = ((2, 7) <= sys.version_info < (2, 8))
+
 
 def user_agent(product=None):
     ua = []
@@ -276,7 +278,10 @@ def submit(method, uri, body, headers):
             for key, value in headers.items():
                 log.debug(">>> {0}: {1}".format(key, value))
         http.request(method, uri.absolute_path_reference, body, headers)
-        return http.getresponse(buffering=True)
+        if supports_buffering:
+            return http.getresponse(buffering=True)
+        else:
+            return http.getresponse()
 
     try:
         try:
