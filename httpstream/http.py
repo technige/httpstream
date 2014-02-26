@@ -21,17 +21,21 @@ from __future__ import unicode_literals
 from base64 import b64encode
 import errno
 try:
-    from http.client import (BadStatusLine, CannotSendRequest, HTTPConnection,
-                             HTTPSConnection, HTTPException, ResponseNotReady,
+    from http.client import (BadStatusLine, CannotSendRequest,
+                             HTTPConnection as _HTTPConnection,
+                             HTTPSConnection as _HTTPSConnection,
+                             HTTPException, ResponseNotReady,
                              responses)
 except ImportError:
-    from httplib import (BadStatusLine, CannotSendRequest, HTTPConnection,
-                         HTTPSConnection, HTTPException, ResponseNotReady,
+    from httplib import (BadStatusLine, CannotSendRequest,
+                         HTTPConnection as _HTTPConnection,
+                         HTTPSConnection as _HTTPSConnection,
+                         HTTPException, ResponseNotReady,
                          responses)
 import json
 import logging
 from os import strerror
-from socket import error, gaierror, herror, timeout
+from socket import error, gaierror, herror, timeout, IPPROTO_TCP, TCP_NODELAY
 from threading import local
 import sys
 from xml.dom.minidom import parseString
@@ -48,6 +52,27 @@ from .numbers import *
 __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
            "Response", "Redirection", "ClientError", "ServerError", "Resource",
            "ResourceTemplate", "get", "put", "post", "delete", "head"]
+
+
+class HTTPConnection(_HTTPConnection):
+    """ Patched class to avoid Nagle's algorithm:
+    https://en.wikipedia.org/wiki/Nagle%27s_algorithm
+    """
+
+    def connect(self):
+        _HTTPConnection.connect(self)
+        self.sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
+
+
+class HTTPSConnection(_HTTPSConnection):
+    """ Patched class to avoid Nagle's algorithm:
+    https://en.wikipedia.org/wiki/Nagle%27s_algorithm
+    """
+
+    def connect(self):
+        _HTTPSConnection.connect(self)
+        self.sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
+
 
 connection_classes = {
     "http": HTTPConnection,
