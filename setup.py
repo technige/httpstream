@@ -56,6 +56,5 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Software Development",
     ],
-    ext_modules=extensions,
     zip_safe=False,
 )
