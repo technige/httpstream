@@ -42,7 +42,6 @@ setup(
     url="https://httpstream.readthedocs.org/",
     packages=[
         "httpstream",
-        "httpstream.mock",
     ],
     install_requires=[
     ],
