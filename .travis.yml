@@ -5,9 +5,9 @@ python:
   - "3.3"
 # install requirements
 install:
-  - pip install -r requirements.txt
+  - "pip install -r requirements.txt"
 # install test requirements
 install:
-  - pip install pytest-cov
+  - "pip install pytest-cov"
 # run tests
 script: ./runtests.sh
