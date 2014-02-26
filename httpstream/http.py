@@ -631,7 +631,7 @@ class Response(object):
             else:
                 data = self._response.read(size)
                 completed = bool(size and not data)
-            return bytearray(data)
+            return data
         finally:
             if completed:
                 self.close()
