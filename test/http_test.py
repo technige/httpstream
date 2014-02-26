@@ -228,3 +228,10 @@ def test_cannot_use_unknown_scheme():
         assert True
     else:
         assert False
+
+
+def test_can_get_remote_resource():
+    try:
+        Resource("http://www.timeapi.org/utc/now").get()
+    except:
+        pass

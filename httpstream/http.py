@@ -276,7 +276,7 @@ def submit(method, uri, body, headers):
             for key, value in headers.items():
                 log.debug(">>> {0}: {1}".format(key, value))
         http.request(method, uri.absolute_path_reference, body, headers)
-        return http.getresponse()
+        return http.getresponse(buffering=True)
 
     try:
         try:
