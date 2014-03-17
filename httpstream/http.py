@@ -37,6 +37,7 @@ import logging
 from os import strerror
 from socket import error, gaierror, herror, timeout, IPPROTO_TCP, TCP_NODELAY
 from threading import local
+import socket
 import sys
 from xml.dom.minidom import parseString
 
@@ -54,13 +55,20 @@ __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
            "ResourceTemplate", "get", "put", "post", "delete", "head"]
 
 
+socket_timeout = 30
+
+
 class HTTPConnection(_HTTPConnection):
     """ Patched class to avoid Nagle's algorithm:
     https://en.wikipedia.org/wiki/Nagle%27s_algorithm
     """
 
     def connect(self):
-        _HTTPConnection.connect(self)
+        """ Connect to the host and port specified at construction.
+        """
+        self.sock = socket.create_connection((self.host, self.port),
+                                             socket_timeout,
+                                             self.source_address)
         self.sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
 
 
@@ -70,7 +78,11 @@ class HTTPSConnection(_HTTPSConnection):
     """
 
     def connect(self):
-        _HTTPSConnection.connect(self)
+        """ Connect to the host and port specified at construction.
+        """
+        self.sock = socket.create_connection((self.host, self.port),
+                                             socket_timeout,
+                                             self.source_address)
         self.sock.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
 
 
