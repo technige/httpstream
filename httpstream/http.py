@@ -431,6 +431,10 @@ class Request(object):
                 return Response.wrap(http, uri, self, rs, **response_kwargs)
 
 
+class ContentConsumed(Exception):
+    pass
+
+
 class Response(object):
     """ File-like object allowing consumption of an HTTP response.
     """
@@ -614,7 +618,6 @@ class Response(object):
     @property
     def content(self):
         """ Fetch and return all content.
-        type.
         """
         if self.status_code == NO_CONTENT:
             return None
@@ -626,8 +629,11 @@ class Response(object):
             return self.read()
 
     def read(self, size=None):
-        """ Fetch some or all of the response content, returning as bytes.
+        """ Fetch some or all of the response content as raw bytes.
         """
+        if self.__consumed:
+            raise ContentConsumed("All available response content has already "
+                                  "been consumed")
         try:
             if size is None:
                 data = self.__response.read()
@@ -844,6 +850,8 @@ class Resource(object):
             be listed in the ``User-Agent`` header (optional)
         :param chunk_size: number of bytes to retrieve per chunk (optional,
             default=4096)
+        :param cache: flag to indicate whether to turn on caching so that
+            response content can be stored for multiple reads (optional)
         :return: file-like :py:class:`Response <httpstream.http.Response>`
             object from which content can be read
         """
