@@ -500,12 +500,20 @@ class Response(object):
         return False
 
     @property
+    def cache(self):
+        """ Flag to indicate whether or not content will be cached.
+        """
+        return self.__cached is not None
+
+    @property
     def consumed(self):
+        """ Flag to indicate whether or not content has been consumed.
+        """
         return self.__consumed
 
     @property
     def closed(self):
-        """ Indicates whether or not the response is closed.
+        """ Flag to indicate whether or not the response is closed.
         """
         return not bool(self.__http)
 
@@ -515,10 +523,10 @@ class Response(object):
         """
         if self.__http:
             try:
-                if self.__cached is None:
-                    self.__response.read()
-                else:
+                if self.cache:
                     self.__cached += self.__response.read()
+                else:
+                    self.__response.read()
             except HTTPException:
                 pass
             else:
@@ -610,7 +618,7 @@ class Response(object):
         """
         if self.status_code == NO_CONTENT:
             return None
-        elif self.__consumed and self.__cached is not None:
+        elif self.__consumed and self.cache:
             if isinstance(self.__cached, bytearray):
                 self.__cached = bytes(self.__cached)
             return self.__cached
@@ -627,7 +635,7 @@ class Response(object):
             else:
                 data = self.__response.read(size)
                 self.__consumed = bool(size and not data)
-            if self.__cached is not None:
+            if self.cache:
                 self.__cached += data
             return data
         finally:
@@ -637,11 +645,21 @@ class Response(object):
 
 class TextResponse(Response):
 
+    def __init__(self, *args, **kwargs):
+        super(TextResponse, self).__init__(*args, **kwargs)
+        self.__cached = None
+
     @property
     def content(self):
         """ Fetches all content as a string.
         """
-        return super(TextResponse, self).content.decode(self.encoding)
+        if self.cache:
+            if self.__cached is None:
+                self.__cached = \
+                    super(TextResponse, self).content.decode(self.encoding)
+            return self.__cached
+        else:
+            return super(TextResponse, self).content.decode(self.encoding)
 
     def chunks(self, chunk_size=None):
         """ Iterate through the content as chunks of text. Chunk sizes may vary
@@ -702,12 +720,21 @@ class TextResponse(Response):
 
 class JSONResponse(TextResponse):
 
+    def __init__(self, *args, **kwargs):
+        super(JSONResponse, self).__init__(*args, **kwargs)
+        self.__cached = None
+
     @property
     def content(self):
         """ Fetch all content, decoding from JSON and returning the decoded
         value.
         """
-        return json.loads(super(JSONResponse, self).content)
+        if self.cache:
+            if self.__cached is None:
+                self.__cached = json.loads(super(JSONResponse, self).content)
+            return self.__cached
+        else:
+            return json.loads(super(JSONResponse, self).content)
 
     def __iter__(self):
         """ Iterate through the content as individual JSON values.
@@ -717,12 +744,21 @@ class JSONResponse(TextResponse):
 
 class XMLResponse(TextResponse):
 
+    def __init__(self, *args, **kwargs):
+        super(XMLResponse, self).__init__(*args, **kwargs)
+        self.__cached = None
+
     @property
     def content(self):
         """ Fetches all content, decoding from XML and returning as a DOM
         object.
         """
-        return parseString(super(XMLResponse, self).content)
+        if self.cache:
+            if self.__cached is None:
+                self.__cached = parseString(super(XMLResponse, self).content)
+            return self.__cached
+        else:
+            return parseString(super(XMLResponse, self).content)
 
 
 class Redirection(Response):
