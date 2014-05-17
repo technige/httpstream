@@ -381,11 +381,13 @@ class Request(object):
     def body(self):
         """ Content of the request.
         """
-        if isinstance(self._body, (dict, list, tuple)):
-            return json.dumps(self._body, cls=JSONEncoder,
-                              separators=(",", ":"))
+        body = self._body
+        if isinstance(body, (set, frozenset)):
+            body = list(body)
+        if isinstance(body, (dict, list, tuple)):
+            return json.dumps(body, cls=JSONEncoder, separators=",:")
         else:
-            return self._body
+            return body
 
     @body.setter
     def body(self, value):
