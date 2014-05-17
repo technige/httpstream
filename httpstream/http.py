@@ -425,10 +425,6 @@ class Request(object):
                     redirection.close()
                 else:
                     return redirection
-            elif status_class == 4:
-                raise ClientError(http, uri, self, rs, **response_kwargs)
-            elif status_class == 5:
-                raise ServerError(http, uri, self, rs, **response_kwargs)
             else:
                 return Response.wrap(http, uri, self, rs, **response_kwargs)
 
@@ -461,7 +457,16 @@ class Response(object):
             cls = TextResponse
         else:
             cls = Response
-        return cls(http, uri, request, response, **kwargs)
+        status_class = response.status // 100
+        if status_class == 4:
+            cls = type("ClientError", (cls, ClientError), {})
+        elif status_class == 5:
+            cls = type("ServerError", (cls, ServerError), {})
+        inst = cls(http, uri, request, response, **kwargs)
+        if isinstance(inst, Exception):
+            raise inst
+        else:
+            return inst
 
     def __init__(self, http, uri, request, response, **kwargs):
         self.__http = http
@@ -658,6 +663,21 @@ class Response(object):
                 self.close()
 
 
+class Redirection(Response):
+
+    def __init__(self, http, uri, request, response, **kwargs):
+        assert response.status // 100 == 3
+        Response.__init__(self, http, uri, request, response, **kwargs)
+
+
+class ClientError(Exception):
+    pass
+
+
+class ServerError(Exception):
+    pass
+
+
 class TextResponse(Response):
 
     def __init__(self, *args, **kwargs):
@@ -774,29 +794,6 @@ class XMLResponse(TextResponse):
             return self.__cached
         else:
             return parseString(super(XMLResponse, self).content)
-
-
-class Redirection(Response):
-
-    def __init__(self, http, uri, request, response, **kwargs):
-        assert response.status // 100 == 3
-        Response.__init__(self, http, uri, request, response, **kwargs)
-
-
-class ClientError(Exception, Response):
-
-    def __init__(self, http, uri, request, response, **kwargs):
-        assert response.status // 100 == 4
-        Response.__init__(self, http, uri, request, response, **kwargs)
-        Exception.__init__(self, self.reason)
-
-
-class ServerError(Exception, Response):
-
-    def __init__(self, http, uri, request, response, **kwargs):
-        assert response.status // 100 == 5
-        Response.__init__(self, http, uri, request, response, **kwargs)
-        Exception.__init__(self, self.reason)
 
 
 class Resource(object):
