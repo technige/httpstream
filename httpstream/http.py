@@ -444,16 +444,18 @@ class Response(object):
         """ Factory method to return an instance of an appropriate Response
         subclass.
         """
-        c_type = response.getheader("Content-Type").partition(";")[0].strip()
-        if c_type in ("application/json",
-                      "application/javascript",
-                      "application/x-javascript",
-                      "text/javascript",
-                      "text/json"):
+        content_type_header = response.getheader("Content-Type")
+        if content_type_header:
+            content_type = content_type_header.partition(";")[0].strip()
+        else:
+            content_type = None
+        if content_type in ("application/json", "application/javascript",
+                            "application/x-javascript", "text/javascript",
+                            "text/json"):
             cls = JSONResponse
-        elif c_type in ("application/xml",):
+        elif content_type in ("application/xml",):
             cls = XMLResponse
-        elif c_type.startswith("text/"):
+        elif content_type and content_type.startswith("text/"):
             cls = TextResponse
         else:
             cls = Response
