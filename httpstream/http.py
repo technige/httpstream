@@ -507,6 +507,11 @@ class Response(object):
         self.close()
         return False
 
+    def __iter__(self):
+        """ Iterate through the content as bytes.
+        """
+        return iter(self.content or b"")
+
     @property
     def cache(self):
         """ Flag to indicate whether or not content will be cached.
