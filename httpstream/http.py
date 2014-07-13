@@ -152,7 +152,7 @@ def user_agent(product=None):
 class Loggable(object):
 
     def __init__(self, cls, message):
-        log.error("!!! {0}: {1}".format(cls.__name__, message))
+        log.error("!!! %s: %s", cls.__name__, message)
 
 
 class NetworkAddressError(Loggable, IOError):
@@ -290,18 +290,18 @@ def submit(method, uri, body, headers):
 
     def send(reconnect=None):
         if reconnect:
-            log.info("<~> Reconnecting ({0})".format(reconnect))
+            log.info("<~> Reconnecting (%s)", reconnect)
             http.close()
             http.connect()
         if method in ("GET", "DELETE") and not body:
-            log.info(">>> {0} {1}".format(method, uri))
+            log.info(">>> %s %s", method, uri.string)
         elif body:
-            log.info(">>> {0} {1} [{2}]".format(method, uri, len(body)))
+            log.info(">>> %s %s [%s]", method, uri.string, len(body))
         else:
-            log.info(">>> {0} {1} [0]".format(method, uri))
+            log.info(">>> %s %s [%s]", method, uri.string, 0)
         if __debug__:
             for key, value in headers.items():
-                log.debug(">>> {0}: {1}".format(key, value))
+                log.debug(">>> %s: %s", key, value)
         http.request(method, uri.absolute_path_reference, body, headers)
         if supports_buffering:
             return http.getresponse(buffering=True)
@@ -488,10 +488,14 @@ class Response(object):
         self.__headers = KeyValueList(self.__response.getheaders())
         #: Default chunk size for this response
         self.chunk_size = kwargs.get("chunk_size", default_chunk_size)
-        log.info("<<< {0}".format(self))
+        if self.is_chunked:
+            content_length = "chunked"
+        else:
+            content_length = self.content_length
+        log.info("<<< %s %s [%s]", self.status_code, self.reason, content_length)
         if __debug__:
             for key, value in self.__response.getheaders():
-                log.debug("<<< {0}: {1}".format(key, value))
+                log.debug("<<< %s: %s", key, value)
 
     def __del__(self):
         self.close()
