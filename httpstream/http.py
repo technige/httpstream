@@ -42,9 +42,8 @@ import ssl
 import sys
 from xml.dom.minidom import parseString
 
-from jsonstream import JSONStream
-from urimagic import URI, URITemplate
-from urimagic.kvlist import KeyValueList  # no point in another copy
+from .packages.urimagic import URI, URITemplate
+from .packages.urimagic.kvlist import KeyValueList  # no point in another copy
 
 from . import __version__
 from .jsonencoder import JSONEncoder
@@ -778,6 +777,7 @@ class JSONResponse(TextResponse):
     def __iter__(self):
         """ Iterate through the content as individual JSON values.
         """
+        from jsonstream import JSONStream
         return iter(JSONStream(self.chunks()))
 
 

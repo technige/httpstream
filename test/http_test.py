@@ -94,6 +94,7 @@ def test_can_get_simple_text_resource():
 def test_can_get_simple_text_resource_with_caching():
     resource = Resource("http://localhost:8080/hello")
     response = resource.get(cache=True)
+    assert response.content_type.startswith("text/")
     assert isinstance(response, TextResponse)
     assert not response.consumed
     assert response.content == "hello, world"

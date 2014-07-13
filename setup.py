@@ -39,11 +39,12 @@ setup(
     long_description=open("README.rst").read(),
     author=__author__,
     author_email=__email__,
-    url="https://httpstream.readthedocs.org/",
+    url="http://nigelsmall.com/httpstream",
     packages=[
         "httpstream",
     ],
     install_requires=[
+        "jsonstream>=1.0.0",
     ],
     license=__license__,
     classifiers=[
