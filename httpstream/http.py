@@ -108,14 +108,7 @@ default_encoding = "ISO-8859-1"
 default_chunk_size = 4096
 
 log = logging.getLogger("httpstream")
-try:
-    log.addHandler(logging.NullHandler())
-except AttributeError:
-    # Python 2.6
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
-    log.addHandler(NullHandler())
+log.addHandler(logging.NullHandler())
 
 redirects = {}
 
