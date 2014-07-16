@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="800px"
+   height="600px"
+   id="svg3040"
+   version="1.1"
+   inkscape:version="0.48.3.1 r9886"
+   sodipodi:docname="httpstream.svg">
+  <defs
+     id="defs3042" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.6"
+     inkscape:cx="-12.745772"
+     inkscape:cy="300"
+     inkscape:current-layer="layer1"
+     inkscape:document-units="px"
+     showgrid="false"
+     inkscape:window-width="1366"
+     inkscape:window-height="718"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata3045">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer">
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="89.058777"
+       y="335.45999"
+       id="text2989"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan2991"
+         x="89.058777"
+         y="335.45999"
+         style="font-size:120px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:saxMono;-inkscape-font-specification:saxMono"><tspan
+           id="tspan4387"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;letter-spacing:-11.39999866px;fill:#3773a5;fill-opacity:1;font-family:Ubuntu;-inkscape-font-specification:Ubuntu">h</tspan><tspan
+           id="tspan4389"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;letter-spacing:-6.27999735px;fill:#3773a5;fill-opacity:1;font-family:Ubuntu;-inkscape-font-specification:Ubuntu">tt<tspan
+   style="letter-spacing:-7.5700016px"
+   id="tspan3286">p</tspan><tspan
+   id="tspan2996"
+   style="letter-spacing:-1.42000091px;fill:#c8beb7">:</tspan></tspan><tspan
+           style="font-size:130px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;letter-spacing:-4.54999733000000006px;fill:#ffbc2f;fill-opacity:1;font-family:Georgia;-inkscape-font-specification:Georgia Italic"
+           id="tspan2995"><tspan
+   style="letter-spacing:-5.95000266999999994px;fill:#ffbc2f;fill-opacity:1"
+   id="tspan3284">s</tspan><tspan
+   style="letter-spacing:0.38999995999999998px;fill:#ffbc2f;fill-opacity:1"
+   id="tspan3282">t</tspan><tspan
+   style="letter-spacing:-8.40999985000000017px;fill:#ffbc2f;fill-opacity:1"
+   id="tspan2994">r</tspan><tspan
+   style="letter-spacing:-6.11000204000000036px;fill:#ffbc2f;fill-opacity:1"
+   id="tspan3291">e</tspan><tspan
+   style="letter-spacing:-7.71000527999999985px;fill:#ffbc2f;fill-opacity:1"
+   id="tspan3369">a</tspan>m</tspan></tspan></text>
+  </g>
+</svg>

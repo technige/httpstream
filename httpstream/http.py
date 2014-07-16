@@ -930,20 +930,68 @@ class ResourceTemplate(object):
 
 
 def get(uri, headers=None, redirect_limit=5, **kwargs):
+    """ Issue an HTTP ``GET`` request to a given `uri`.
+
+    :param uri: target URI for the request
+    :param headers: dictionary of extra headers to send (optional)
+    :param redirect_limit: maximum number of redirects to follow (optional, default=5)
+    :param product: name or (name, version) tuple to be passed in the ``User-Agent``
+        header (optional)
+    :param chunk_size: number of bytes to retrieve per chunk (optional, default=4096)
+    :param cache: boolean flag to allow caching so response content can be stored
+        for multiple reads (optional)
+    :return: file-like :class:`Response <httpstream.Response>` object from which
+        content can be read
+    """
     return Resource(uri).get(headers, redirect_limit, **kwargs)
 
 
 def put(uri, body=None, headers=None, **kwargs):
+    """ Issue an HTTP ``PUT`` request to a given `uri`, optionally with a payload.
+
+    :param uri: target URI for the request
+    :param body: payload to be sent with the request (optional)
+    :param headers: dictionary of extra headers to send (optional)
+    :param kwargs: see :func:`get <httpstream.get>` for other keyword arguments
+    :return: file-like :class:`Response <httpstream.Response>` object from which
+        content can be read
+    """
     return Resource(uri).put(body, headers, **kwargs)
 
 
 def post(uri, body=None, headers=None, **kwargs):
+    """ Issue an HTTP ``POST`` request to a given `uri`, optionally with a payload.
+
+    :param uri: target URI for the request
+    :param body: payload to be sent with the request (optional)
+    :param headers: dictionary of extra headers to send (optional)
+    :param kwargs: see :func:`get <httpstream.get>` for other keyword arguments
+    :return: file-like :class:`Response <httpstream.Response>` object from which
+        content can be read
+    """
     return Resource(uri).post(body, headers, **kwargs)
 
 
 def delete(uri, headers=None, **kwargs):
+    """ Issue an HTTP ``DELETE`` request to a given `uri`.
+
+    :param uri: target URI for the request
+    :param headers: dictionary of extra headers to send (optional)
+    :param kwargs: see :func:`get <httpstream.get>` for other keyword arguments
+    :return: file-like :class:`Response <httpstream.Response>` object from which
+        content can be read
+    """
     return Resource(uri).delete(headers, **kwargs)
 
 
 def head(uri, headers=None, redirect_limit=5, **kwargs):
+    """ Issue an HTTP ``HEAD`` request to a given `uri`.
+
+    :param uri: target URI for the request
+    :param headers: dictionary of extra headers to send (optional)
+    :param redirect_limit: maximum number of redirects to follow (optional, default=5)
+    :param kwargs: see :func:`get <httpstream.get>` for other keyword arguments
+    :return: file-like :class:`Response <httpstream.Response>` object from which
+        content can be read
+    """
     return Resource(uri).head(headers, redirect_limit, **kwargs)
