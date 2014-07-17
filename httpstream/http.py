@@ -830,22 +830,22 @@ class Resource(object):
     def __eq__(self, other):
         """ Determine equality of two objects based on URI.
         """
-        return self.__uri == other._uri
+        return self.uri == other.uri
 
     def __ne__(self, other):
         """ Determine inequality of two objects based on URI.
         """
-        return self.__uri != other._uri
+        return not self.__eq__(other)
 
     def __bool__(self):
-        return bool(self.__uri)
+        return bool(self.uri)
 
     def __nonzero__(self):
-        return bool(self.__uri)
+        return bool(self.uri)
 
     @property
     def __uri__(self):
-        return self.__uri
+        return self.uri
 
     @property
     def uri(self):
