@@ -241,18 +241,7 @@ def test_can_set_product_in_user_agent():
         assert received_product == test_product
 
 
-def test_cannot_use_unknown_scheme():
-    resource = Resource("xxxx://www.example.com/")
-    try:
-        resource.get()
-    except ValueError:
-        assert True
-    else:
-        assert False
-
-
-def test_can_get_remote_resource():
-    try:
-        Resource("http://www.timeapi.org/utc/now").get()
-    except:
-        pass
+def test_auto_populate_uri_scheme():
+    resource = Resource("nigelsmall.com")
+    response = resource.get()
+    assert response.uri == "http://nigelsmall.com"

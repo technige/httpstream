@@ -53,8 +53,10 @@ from .numbers import *
 __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
            "Response", "TextResponse", "JSONResponse", "XMLResponse",
            "Redirection", "ClientError", "ServerError", "Resource",
-           "ResourceTemplate", "get", "put", "post", "delete", "head"]
+           "ResourceTemplate", "head", "get", "put", "patch", "post", "delete"]
 
+json_content_types = ("application/javascript", "application/json", "application/x-javascript",
+                      "text/javascript", "text/json")
 
 socket_timeout = 30
 
@@ -127,6 +129,15 @@ if hasattr(errno, "ECONNRESET"):
     retry_codes[errno.ECONNRESET] = "connection reset"
 
 supports_buffering = ((2, 7) <= sys.version_info < (2, 8))
+
+
+def make_uri(uri):
+    if uri is None or isinstance(uri, URI):
+        return uri
+    scheme = uri.partition(":")[0]
+    if scheme not in ("http", "https"):
+        uri = "http://" + uri
+    return URI(uri)
 
 
 def user_agent(product=None):
@@ -354,48 +365,49 @@ class Request(object):
         if not uri:
             raise ValueError("No URI specified for request")
         #: HTTP method of this request
-        self.method = method
-        self.uri = uri
-        self._headers = dict(headers or {})
-        self.body = body
+        self.__method = method
+        self.__uri = make_uri(uri)
+        self.__headers = dict(headers or {})
+        if isinstance(body, (set, frozenset)):
+            body = list(body)
+        if isinstance(body, (dict, list, tuple)):
+            self.__body = json.dumps(body, cls=JSONEncoder, separators=",:")
+            self.__headers.setdefault("Content-Type", "application/json")
+        else:
+            self.__body = body
+
+    def __repr__(self):
+        body = self.body
+        if body:
+            return "%s %s [%s]" % (self.method, self.uri, len(body))
+        else:
+            return "%s %s" % (self.method, self.uri)
 
     @property
     def __uri__(self):
         return self.uri
 
     @property
+    def method(self):
+        return self.__method
+
+    @property
     def uri(self):
         """ URI of the request.
         """
-        return self._uri
-
-    @uri.setter
-    def uri(self, value):
-        self._uri = URI(value)
+        return self.__uri
 
     @property
     def body(self):
         """ Content of the request.
         """
-        body = self._body
-        if isinstance(body, (set, frozenset)):
-            body = list(body)
-        if isinstance(body, (dict, list, tuple)):
-            return json.dumps(body, cls=JSONEncoder, separators=",:")
-        else:
-            return body
-
-    @body.setter
-    def body(self, value):
-        self._body = value
+        return self.__body
 
     @property
     def headers(self):
         """ Dictionary of headers attached to the request.
         """
-        if isinstance(self._body, (dict, list, tuple)):
-            self._headers.setdefault("Content-Type", "application/json")
-        return self._headers
+        return self.__headers
 
     def submit(self, redirect_limit=0, product=None, **response_kwargs):
         """ Submit this request and return a
@@ -408,8 +420,7 @@ class Request(object):
             http, rs = submit(self.method, uri, self.body, headers)
             status_class = rs.status // 100
             if status_class == 3:
-                redirection = Redirection(http, uri, self, rs,
-                                          **response_kwargs)
+                redirection = Redirection(http, uri, self, rs, **response_kwargs)
                 if redirect_limit:
                     redirect_limit -= 1
                     location = URI.resolve(uri, rs.getheader("Location"))
@@ -443,9 +454,7 @@ class Response(object):
             content_type = content_type_header.partition(";")[0].strip()
         else:
             content_type = None
-        if content_type in ("application/json", "application/javascript",
-                            "application/x-javascript", "text/javascript",
-                            "text/json"):
+        if content_type in json_content_types:
             cls = JSONResponse
         elif content_type in ("application/xml",):
             cls = XMLResponse
@@ -460,6 +469,7 @@ class Response(object):
             cls = type(server_error_name, (cls, ServerError), {})
         inst = cls(http, uri, request, response, **kwargs)
         if isinstance(inst, Exception):
+            Exception.__init__(inst, "%s %s" % (response.status, response.reason))
             raise inst
         else:
             return inst
@@ -495,10 +505,9 @@ class Response(object):
 
     def __repr__(self):
         if self.is_chunked:
-            return "{0} {1} [chunked]".format(self.status_code, self.reason)
+            return "%s %s [chunked]" % (self.status_code, self.reason)
         else:
-            return "{0} {1} [{2}]".format(self.status_code, self.reason,
-                                          self.content_length)
+            return "%s %s [%s]" % (self.status_code, self.reason, self.content_length)
 
     def __getitem__(self, key):
         if not self.__response:
@@ -802,49 +811,59 @@ class Resource(object):
     """
 
     def __init__(self, uri):
-        if isinstance(uri, URI):
-            self._uri = uri
-        else:
-            self._uri = URI(uri)
+        self.__uri = make_uri(uri)
 
     def __str__(self):
-        return "<{0}>".format(str(self._uri))
+        uri = self.uri
+        if uri is None:
+            return "<>"
+        else:
+            return "<%s>" % uri.string
 
     def __repr__(self):
-        return "{0}({1})".format(self.__class__.__name__,
-                                 repr(self._uri.string))
+        uri = self.uri
+        if uri is None:
+            return "%s(None)" % self.__class__.__name__
+        else:
+            return "%s(%s)" % (self.__class__.__name__, repr(uri.string))
 
     def __eq__(self, other):
         """ Determine equality of two objects based on URI.
         """
-        return self._uri == other._uri
+        return self.__uri == other._uri
 
     def __ne__(self, other):
         """ Determine inequality of two objects based on URI.
         """
-        return self._uri != other._uri
+        return self.__uri != other._uri
 
     def __bool__(self):
-        return bool(self._uri)
+        return bool(self.__uri)
 
     def __nonzero__(self):
-        return bool(self._uri)
+        return bool(self.__uri)
 
     @property
     def __uri__(self):
-        return self._uri
+        return self.__uri
 
     @property
     def uri(self):
         """ The URI of this resource.
         """
-        return self._uri
+        return self.__uri
 
     def resolve(self, reference, strict=True):
         """ Resolve a URI reference against the URI for this resource,
         returning a new resource represented by the new target URI.
         """
-        return Resource(self._uri.resolve(reference, strict))
+        return Resource(self.uri.resolve(reference, strict))
+
+    def head(self, headers=None, redirect_limit=5, **kwargs):
+        """ Issue a ``HEAD`` request to this resource.
+        """
+        rq = Request("HEAD", self.uri, None, headers)
+        return rq.submit(redirect_limit=redirect_limit, **kwargs)
 
     def get(self, headers=None, redirect_limit=5, **kwargs):
         """ Issue a ``GET`` request to this resource.
@@ -862,32 +881,32 @@ class Resource(object):
         :return: file-like :py:class:`Response <httpstream.http.Response>`
             object from which content can be read
         """
-        rq = Request("GET", self._uri, None, headers)
+        rq = Request("GET", self.uri, None, headers)
         return rq.submit(redirect_limit=redirect_limit, **kwargs)
 
     def put(self, body=None, headers=None, **kwargs):
         """ Issue a ``PUT`` request to this resource.
         """
-        rq = Request("PUT", self._uri, body, headers)
+        rq = Request("PUT", self.uri, body, headers)
+        return rq.submit(**kwargs)
+
+    def patch(self, body=None, headers=None, **kwargs):
+        """ Issue a ``PATCH`` request to this resource.
+        """
+        rq = Request("PATCH", self.uri, body, headers)
         return rq.submit(**kwargs)
 
     def post(self, body=None, headers=None, **kwargs):
         """ Issue a ``POST`` request to this resource.
         """
-        rq = Request("POST", self._uri, body, headers)
+        rq = Request("POST", self.uri, body, headers)
         return rq.submit(**kwargs)
 
     def delete(self, headers=None, **kwargs):
         """ Issue a ``DELETE`` request to this resource.
         """
-        rq = Request("DELETE", self._uri, None, headers)
+        rq = Request("DELETE", self.uri, None, headers)
         return rq.submit(**kwargs)
-
-    def head(self, headers=None, redirect_limit=5, **kwargs):
-        """ Issue a ``HEAD`` request to this resource.
-        """
-        rq = Request("HEAD", self._uri, None, headers)
-        return rq.submit(redirect_limit=redirect_limit, **kwargs)
 
 
 class ResourceTemplate(object):
@@ -929,6 +948,19 @@ class ResourceTemplate(object):
         return Resource(self._uri_template.expand(**values))
 
 
+def head(uri, headers=None, redirect_limit=5, **kwargs):
+    """ Issue an HTTP ``HEAD`` request to a given `uri`.
+
+    :param uri: target URI for the request
+    :param headers: dictionary of extra headers to send (optional)
+    :param redirect_limit: maximum number of redirects to follow (optional, default=5)
+    :param kwargs: see :func:`get <httpstream.get>` for other keyword arguments
+    :return: file-like :class:`Response <httpstream.Response>` object from which
+        content can be read
+    """
+    return Resource(uri).head(headers, redirect_limit, **kwargs)
+
+
 def get(uri, headers=None, redirect_limit=5, **kwargs):
     """ Issue an HTTP ``GET`` request to a given `uri`.
 
@@ -959,6 +991,19 @@ def put(uri, body=None, headers=None, **kwargs):
     return Resource(uri).put(body, headers, **kwargs)
 
 
+def patch(uri, body=None, headers=None, **kwargs):
+    """ Issue an HTTP ``PUT`` request to a given `uri`, optionally with a payload.
+
+    :param uri: target URI for the request
+    :param body: payload to be sent with the request (optional)
+    :param headers: dictionary of extra headers to send (optional)
+    :param kwargs: see :func:`get <httpstream.get>` for other keyword arguments
+    :return: file-like :class:`Response <httpstream.Response>` object from which
+        content can be read
+    """
+    return Resource(uri).patch(body, headers, **kwargs)
+
+
 def post(uri, body=None, headers=None, **kwargs):
     """ Issue an HTTP ``POST`` request to a given `uri`, optionally with a payload.
 
@@ -982,16 +1027,3 @@ def delete(uri, headers=None, **kwargs):
         content can be read
     """
     return Resource(uri).delete(headers, **kwargs)
-
-
-def head(uri, headers=None, redirect_limit=5, **kwargs):
-    """ Issue an HTTP ``HEAD`` request to a given `uri`.
-
-    :param uri: target URI for the request
-    :param headers: dictionary of extra headers to send (optional)
-    :param redirect_limit: maximum number of redirects to follow (optional, default=5)
-    :param kwargs: see :func:`get <httpstream.get>` for other keyword arguments
-    :return: file-like :class:`Response <httpstream.Response>` object from which
-        content can be read
-    """
-    return Resource(uri).head(headers, redirect_limit, **kwargs)

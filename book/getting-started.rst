@@ -23,6 +23,8 @@ All the available direct methods are listed below:
 
 .. autofunction:: httpstream.put
 
+.. autofunction:: httpstream.patch
+
 .. autofunction:: httpstream.post
 
 .. autofunction:: httpstream.delete

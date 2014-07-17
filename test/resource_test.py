@@ -69,34 +69,11 @@ def test_can_create_none_resource():
     assert str(resource) == "<>"
 
 
-def test_can_create_resource_from_empty_string():
-    resource = Resource("")
-    assert resource.uri == URI("")
-    assert not bool(resource)
-    assert str(resource) == "<>"
-
-
 def test_can_create_resource_from_string():
     resource = Resource("http://example.com/foo")
     assert resource.uri == URI("http://example.com/foo")
     assert bool(resource)
     assert str(resource) == "<http://example.com/foo>"
-
-
-def test_can_create_resource_from_none_uri():
-    uri = URI(None)
-    resource = Resource(uri)
-    assert resource.uri == uri
-    assert not bool(resource)
-    assert str(resource) == "<>"
-
-
-def test_can_create_resource_from_empty_uri():
-    uri = URI("")
-    resource = Resource(uri)
-    assert resource.uri == uri
-    assert not bool(resource)
-    assert str(resource) == "<>"
 
 
 def test_can_create_resource_from_uri():
