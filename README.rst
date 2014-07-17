@@ -6,8 +6,9 @@
 HTTPStream
 ==========
 
-*HTTPStream* is an HTTP client library for Python with an easy-to-use API and
-support for incremental JSON document retrieval.
+*HTTPStream* is an HTTP client library for Python that wraps the standard library HTTP client
+with a convenient resource-based interface and also provides support for incremental JSON document
+retrieval and RFC 6570 URI Templates.
 
 
 Installation
@@ -16,9 +17,6 @@ Installation
 HTTPStream is hosted on PyPI and so to install, simply use ``pip``::
 
     pip install httpstream
-
-No external dependencies are required, the entire package is self-contained and
-relies only on standard library components.
 
 
 Quick Start
@@ -80,5 +78,4 @@ Quick Start
 Full Documentation
 ==================
 
-For further information on how to use HTTPStream, check out the pages on
-`Read the Docs <https://httpstream.readthedocs.org>`_.
+For further information on how to use HTTPStream, go to `http://nigelsmall.com/httpstream`_.
