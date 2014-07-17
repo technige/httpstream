@@ -78,4 +78,4 @@ Quick Start
 Full Documentation
 ==================
 
-For further information on how to use HTTPStream, go to `http://nigelsmall.com/httpstream`_.
+For further information on how to use HTTPStream, go to http://nigelsmall.com/httpstream.
