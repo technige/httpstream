@@ -42,6 +42,8 @@ setup(
     url="http://nigelsmall.com/httpstream",
     packages=[
         "httpstream",
+	"httpstream.packages",
+	"httpstream.packages.urimagic",
     ],
     install_requires=[
         "jsonstream>=1.0.0",
