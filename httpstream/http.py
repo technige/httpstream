@@ -633,6 +633,21 @@ class Response(object):
         return content_type.get("charset", default_encoding)
 
     @property
+    def filename(self):
+        """ The suggested filename from the `Content-Disposition` header field
+        or the final segment of the path name if no such header is available.
+        """
+        default_filename = self.uri.path.segments[-1]
+        try:
+            content_type = dict(
+                _.strip().partition("=")[0::2]
+                for _ in self.__response.getheader("Content-Disposition").split(";")
+            )
+        except AttributeError:
+            return default_filename
+        return content_type.get("filename", default_filename)
+
+    @property
     def is_chunked(self):
         """ Indicates whether or not the content is chunked.
         """

@@ -115,11 +115,16 @@ def delete(uri, headers=None, **kwargs):
     return Resource(uri).delete(headers, **kwargs)
 
 
-def download(uri, name=None, headers=None, redirect_limit=5, **kwargs):
-    if name is None:
-        from .http import make_uri
-        uri = make_uri(uri)
-        name = uri.path.segments[-1]
-    with get(uri) as source:
-        with open(name, "wb") as destination:
+def download(uri, filename=None, headers=None, redirect_limit=5, **kwargs):
+    """ GET a remote resource and save the content to a local file.
+
+    :param uri:
+    :param filename:
+    :param headers:
+    :param redirect_limit:
+    :param kwargs:
+    :return:
+    """
+    with get(uri, headers=headers, redirect_limit=redirect_limit, **kwargs) as source:
+        with open(filename or source.filename, "wb") as destination:
             destination.write(source.read())
