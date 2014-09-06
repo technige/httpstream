@@ -29,12 +29,11 @@ __email__ = "nigel@nigelsmall.com"
 __license__ = "Apache License, Version 2.0"
 __version__ = "1.3.0"
 
-
 from .http import *
 from .watch import watch
 
 
-def head(uri, headers=None, redirect_limit=5, **kwargs):
+def head(uri, if_modified_since=None, headers=None, redirect_limit=5, **kwargs):
     """ Issue an HTTP ``HEAD`` request to a given `uri`.
 
     :param uri: target URI for the request
@@ -44,10 +43,10 @@ def head(uri, headers=None, redirect_limit=5, **kwargs):
     :return: file-like :class:`Response <httpstream.Response>` object from which
         content can be read
     """
-    return Resource(uri).head(headers, redirect_limit, **kwargs)
+    return Resource(uri).head(if_modified_since, headers, redirect_limit, **kwargs)
 
 
-def get(uri, headers=None, redirect_limit=5, **kwargs):
+def get(uri, if_modified_since=None, headers=None, redirect_limit=5, **kwargs):
     """ Issue an HTTP ``GET`` request to a given `uri`.
 
     :param uri: target URI for the request
@@ -61,7 +60,7 @@ def get(uri, headers=None, redirect_limit=5, **kwargs):
     :return: file-like :class:`Response <httpstream.Response>` object from which
         content can be read
     """
-    return Resource(uri).get(headers, redirect_limit, **kwargs)
+    return Resource(uri).get(if_modified_since, headers, redirect_limit, **kwargs)
 
 
 def put(uri, body=None, headers=None, **kwargs):
@@ -116,7 +115,11 @@ def delete(uri, headers=None, **kwargs):
 
 
 def download(uri, filename=None, headers=None, redirect_limit=5, **kwargs):
-    """ GET a remote resource and save the content to a local file.
+    """ Get a remote resource and save the content to a local file. If a local
+    file already exists at the download destination, the modification time of
+    that file is sent in the request headers as the `If-Modified-Since` value
+    to perform a conditional GET. If the remote file has not been modified, a
+    304 response should then be returned.
 
     :param uri:
     :param filename:
@@ -125,6 +128,24 @@ def download(uri, filename=None, headers=None, redirect_limit=5, **kwargs):
     :param kwargs:
     :return:
     """
-    with get(uri, headers=headers, redirect_limit=redirect_limit, **kwargs) as source:
-        with open(filename or source.filename, "wb") as destination:
-            destination.write(source.read())
+    from datetime import datetime
+    from os import utime
+    from os.path import getmtime
+    from time import time
+    from .tardis import datetime_to_timestamp
+    try:
+        last_modified = datetime.fromtimestamp(getmtime(filename))
+    except OSError:
+        last_modified = None
+    with get(uri, if_modified_since=last_modified, headers=headers, redirect_limit=redirect_limit, **kwargs) as source:
+        if source.status_code == 200:
+            if not filename:
+                filename = source.filename
+            with open(filename, "wb") as destination:
+                destination.write(source.read())
+            utime(filename, (time(), datetime_to_timestamp(source.last_modified)))
+            return True
+        elif source.status_code == 304:
+            return False
+        else:
+            raise ValueError("Unexpected status code %s from download response" % source.status_code)
