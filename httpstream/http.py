@@ -58,8 +58,7 @@ __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
            "Redirection", "ClientError", "ServerError", "Resource",
            "ResourceTemplate"]
 
-json_content_types = ("application/javascript", "application/json", "application/x-javascript",
-                      "text/javascript", "text/json")
+json_content_types = ("application/json", "text/json")
 
 socket_timeout = 30
 
