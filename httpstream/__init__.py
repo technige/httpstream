@@ -142,7 +142,13 @@ def download(uri, filename=None, headers=None, redirect_limit=5, **kwargs):
             if not filename:
                 filename = source.filename
             with open(filename, "wb") as destination:
-                destination.write(source.read())
+                finished = False
+                while not finished:
+                    data = source.read(8192)
+                    if data:
+                        destination.write(data)
+                    else:
+                        finished = True
             utime(filename, (time(), datetime_to_timestamp(source.last_modified)))
             return True
         elif source.status_code == 304:
