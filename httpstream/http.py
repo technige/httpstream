@@ -158,7 +158,7 @@ def user_agent(product=None):
 class Loggable(object):
 
     def __init__(self, cls, message):
-        log.error("!!! %s: %s", cls.__name__, message)
+        log.error("! %s: %s", cls.__name__, message)
 
 
 class NetworkAddressError(Loggable, IOError):
@@ -296,18 +296,18 @@ def submit(method, uri, body, headers):
 
     def send(reconnect=None):
         if reconnect:
-            log.info("<~> Reconnecting (%s)", reconnect)
+            log.info("~ Reconnecting (%s)", reconnect)
             http.close()
             http.connect()
         if method in ("GET", "DELETE") and not body:
-            log.info(">>> %s %s", method, uri.string)
+            log.info("> %s %s", method, uri.string)
         elif body:
-            log.info(">>> %s %s [%s]", method, uri.string, len(body))
+            log.info("> %s %s [%s]", method, uri.string, len(body))
         else:
-            log.info(">>> %s %s [%s]", method, uri.string, 0)
+            log.info("> %s %s [%s]", method, uri.string, 0)
         if __debug__:
             for key, value in headers.items():
-                log.debug(">>> %s: %s", key, value)
+                log.debug("> %s: %s", key, value)
         http.request(method, uri.absolute_path_reference, body, headers)
         if supports_buffering:
             return http.getresponse(buffering=True)
@@ -500,10 +500,10 @@ class Response(object):
             content_length = "chunked"
         else:
             content_length = self.content_length
-        log.info("<<< %s %s [%s]", self.status_code, self.reason, content_length)
+        log.info("< %s %s [%s]", self.status_code, self.reason, content_length)
         if __debug__:
             for key, value in self.__response.getheaders():
-                log.debug("<<< %s: %s", key, value)
+                log.debug("< %s: %s", key, value)
 
     def __del__(self):
         self.close()
