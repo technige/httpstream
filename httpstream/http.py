@@ -16,8 +16,6 @@
 # limitations under the License.
 
 
-from __future__ import unicode_literals
-
 from base64 import b64encode
 from datetime import datetime
 from .tardis import timezone, datetime_to_timestamp
@@ -46,6 +44,7 @@ import sys
 from xml.dom.minidom import parseString
 
 from .packages.urimagic import URI, URITemplate
+from .packages.urimagic.util import xstr
 from .packages.urimagic.kvlist import KeyValueList  # no point in another copy
 
 from . import __version__
@@ -56,7 +55,7 @@ from .numbers import *
 __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
            "Response", "TextResponse", "JSONResponse", "XMLResponse",
            "Redirection", "ClientError", "ServerError", "Resource",
-           "ResourceTemplate"]
+           "ResourceTemplate", "ContentConsumed"]
 
 json_content_types = ("application/json", "text/json")
 
@@ -135,7 +134,10 @@ if hasattr(errno, "ECONNABORTED"):
 if hasattr(errno, "ECONNRESET"):
     retry_codes[errno.ECONNRESET] = "connection reset"
 
-supports_buffering = ((2, 7) <= sys.version_info < (2, 8))
+if (2, 7) <= sys.version_info < (2, 8):
+    getresponse_args = {"buffering": True}
+else:
+    getresponse_args = {}
 
 
 def make_uri(uri):
@@ -286,8 +288,10 @@ class ConnectionPool(object):
 def submit(method, uri, body, headers):
     """ Submit one HTTP request.
     """
-    uri = URI(uri)
-    headers["Host"] = uri.host_port
+    for key, value in headers.items():
+        del headers[key]
+        headers[xstr(key)] = xstr(value)
+    headers["Host"] = xstr(uri.host_port)
     if uri.user_info:
         credentials = uri.user_info.encode("UTF-8")
         value = "Basic " + b64encode(credentials).decode("ASCII")
@@ -302,20 +306,16 @@ def submit(method, uri, body, headers):
             log.info("~ Reconnecting (%s)", reconnect)
             http.close()
             http.connect()
-        if method in ("GET", "DELETE") and not body:
+        if (method == "GET" or method == "DELETE") and not body:
             log.info("> %s %s", method, uri.string)
         elif body:
             log.info("> %s %s [%s]", method, uri.string, len(body))
         else:
             log.info("> %s %s [%s]", method, uri.string, 0)
-        if __debug__:
-            for key, value in headers.items():
-                log.debug("> %s: %s", key, value)
-        http.request(method, uri.absolute_path_reference, body, headers)
-        if supports_buffering:
-            return http.getresponse(buffering=True)
-        else:
-            return http.getresponse()
+        for key, value in headers.items():
+            log.debug("> %s: %s", key, value)
+        http.request(xstr(method), xstr(uri.absolute_path_reference), body, headers)
+        return http.getresponse(**getresponse_args)
 
     try:
         try:
@@ -422,15 +422,15 @@ class Request(object):
         """
         return self.__headers
 
-    def submit(self, redirect_limit=0, product=None, **response_kwargs):
-        """ Submit this request and return a
-        :py:class:`Response <httpstream.Response>` object.
+    def submit(self, redirect_limit=0, **response_kwargs):
+        """ Submit this HTTP request.
+
+        :rtype: :class:`httpstream.Response`
+
         """
-        uri = URI(self.uri)
-        headers = dict(self.headers)
-        headers.setdefault("User-Agent", user_agent(product))
+        uri = self.uri
         while True:
-            http, rs = submit(self.method, uri, self.body, headers)
+            http, rs = submit(self.method, uri, self.body, self.headers)
             status_class = rs.status // 100
             if status_class == 3:
                 redirection = Redirection(http, uri, self, rs, **response_kwargs)
@@ -492,10 +492,7 @@ class Response(object):
 
     def __init__(self, http, uri, request, response, **kwargs):
         self.__http = http
-        if isinstance(uri, URI):
-            self.__uri = uri
-        else:
-            self.__uri = URI(uri)
+        self.__uri = uri
         self.__request = request
         self.__response = response
         self.__consumed = False
@@ -579,12 +576,14 @@ class Response(object):
 
     @property
     def __uri__(self):
-        return self.__uri
+        return self.uri
 
     @property
     def uri(self):
         """ The URI from which the response came.
         """
+        if not isinstance(self.__uri, URI):
+            self.__uri = URI(self.__uri)
         return self.__uri
 
     @property
@@ -606,7 +605,14 @@ class Response(object):
         if self.__reason:
             return self.__reason
         else:
-            return responses[self.status_code]
+            try:
+                return responses[self.status_code]
+            except KeyError:
+                if self.status_code == 422:
+                    return "Unprocessable Entity"
+                else:
+                    raise SystemError("HTTP status code %s is not known by the "
+                                      "Python standard library" % self.status_code)
 
     @property
     def headers(self):
@@ -735,7 +741,6 @@ class Response(object):
             return datetime.fromtimestamp(mktime_tz(parsedate_tz(date)), timezone.utc)
         else:
             return None
-
 
 
 class Redirection(Response):

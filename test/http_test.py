@@ -234,7 +234,8 @@ def test_infinity_is_detected():
 def test_can_set_product_in_user_agent():
     test_product = ("FooBar", "1.2.3")
     resource = Resource("http://localhost:8080/user_agent")
-    with resource.get(product=test_product) as response:
+    headers = {"User-Agent": "/".join(test_product)}
+    with resource.get(headers=headers) as response:
         assert isinstance(response, TextResponse)
         bits = response.content.split()
         received_product = tuple(bits[0].split("/"))
