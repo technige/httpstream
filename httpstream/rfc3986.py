@@ -25,11 +25,6 @@ See: http://www.ietf.org/rfc/rfc3986.txt
 
 from __future__ import unicode_literals
 
-try:
-    from urllib.parse import quote
-except ImportError:
-    from urllib import quote
-
 from .kvlist import KeyValueList
 from .util import bstr, ustr, xstr
 
@@ -76,12 +71,15 @@ def percent_encode(data, safe=None):
     out = []
     p = 0
     for i, char in enumerate(chars):
-        if char == b"%" or (char not in unreserved_and_safe):
+        if char == b"%" or char not in unreserved_and_safe:
             out.append(chars[p:i])
             out.append(percent_codes[char])
             p = i + 1
     out.append(chars[p:])
-    return xstr(b"".join(out))
+    if isinstance(data, (bytes, bytearray)):
+        return b"".join(out)
+    else:
+        return u"".join(map(ustr, out))
 
 
 def percent_decode(data):
