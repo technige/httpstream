@@ -25,11 +25,10 @@ See: http://www.ietf.org/rfc/rfc3986.txt
 
 from __future__ import unicode_literals
 
-import re
 try:
-    from urllib.parse import quote, unquote
+    from urllib.parse import quote
 except ImportError:
-    from urllib import quote, unquote
+    from urllib import quote
 
 from .kvlist import KeyValueList
 from .util import bstr, ustr, xstr
@@ -39,6 +38,7 @@ __all__ = ["general_delimiters", "subcomponent_delimiters",
            "reserved", "unreserved", "percent_encode", "percent_decode",
            "ParameterString", "Authority", "Path", "Query", "URI"]
 
+unhex = dict(zip(b"0123456789ABCDEFabcdef", list(range(0, 16)) + list(range(10, 16))))
 
 # RFC 3986 § 2.2.
 general_delimiters = ":/?#[]@"
@@ -69,16 +69,30 @@ def percent_encode(data, safe=None):
             key + "=" + percent_encode(value, safe=safe)
             for key, value in data.items()
         )
-    return quote(bstr(data), safe or b"")
+    if not safe:
+        safe = ""
+    try:
+        chars = list(data)
+    except TypeError:
+        chars = list(ustr(data))
+    for i, char in enumerate(chars):
+        if char == "%" or (char not in unreserved and char not in safe):
+            chars[i] = "".join("%" + hex(b)[2:].upper().zfill(2)
+                               for b in bytearray(char, "utf-8"))
+    return "".join(chars)
 
 
 def percent_decode(data):
     """ Percent decode a string of data.
-
     """
     if data is None:
         return None
-    return unquote(xstr(data))
+    parts = bstr(data).split(b"%")
+    out = [parts[0].replace(b"+", b" ")]
+    for i, part in enumerate(parts[1:], start=1):
+        out.append(bytes(bytearray([(unhex[part[0]] << 4) + unhex[part[1]]])))
+        out.append(part[2:].replace(b"+", b" "))
+    return b"".join(out).decode("utf-8")
 
 
 class Part(object):
@@ -101,7 +115,10 @@ class Part(object):
         pass
 
     def __repr__(self):
-        return "{0}({1})".format(self.__class__.__name__, repr(self.string))
+        if self.string is None:
+            return "%s" % self.__class__.__name__
+        else:
+            return "%s(%r)" % (self.__class__.__name__, self.string)
 
     def __str__(self):
         return self.string or ""
@@ -236,16 +253,17 @@ class Authority(Part):
 
     __instances = {}
 
-    def __new__(cls, string):
+    def __new__(cls, string=None):
+        if string is None:
+            return super(Authority, cls).__new__(cls)
         try:
             inst = cls.__instances[string]
         except KeyError:
             inst = super(Authority, cls).__new__(cls)
-            if string is not None:
-                user_info, at, host_port = string.rpartition("@")
-                if at:
-                    inst.__user_info = percent_decode(user_info)
-                inst.__host, inst.__port = cls._parse_host_port(host_port)
+            user_info, at, host_port = string.rpartition("@")
+            if at:
+                inst.__user_info = percent_decode(user_info)
+            inst.__host, inst.__port = cls._parse_host_port(host_port)
             cls.__instances[string] = inst
         return inst
 
@@ -255,8 +273,14 @@ class Authority(Part):
 
     __string = NotImplemented
 
-    def __init__(self, string):
+    def __init__(self, string=None):
         super(Authority, self).__init__()
+
+    def __bool__(self):
+        return bool(self.__user_info or self.__host or self.__port)
+
+    def __nonzero__(self):
+        return bool(self.__user_info or self.__host or self.__port)
 
     def __hash__(self):
         return hash(self.string)
@@ -394,6 +418,33 @@ class Authority(Part):
         :return:
         """
         return self.__user_info
+
+    def with_user_info(self, string):
+        target = Authority(None)
+        target.__user_info = percent_decode(string)
+        target.__host = self.__host
+        target.__port = self.__port
+        return target
+
+    def with_host_port(self, string):
+        target = Authority(None)
+        target.__user_info = self.__user_info
+        target.__host, target.__port = self._parse_host_port(string)
+        return target
+
+    def with_host(self, string):
+        target = Authority(None)
+        target.__user_info = self.__user_info
+        target.__host = string
+        target.__port = self.__port
+        return target
+
+    def with_port(self, value):
+        target = Authority(None)
+        target.__user_info = self.__user_info
+        target.__host = self.__host
+        target.__port = int(value)
+        return target
 
 
 class Path(Part):
@@ -534,7 +585,7 @@ class URI(Part):
 
     @classmethod
     def _partition_fragment(cls, value):
-        value, hash, fragment = value.partition("#")
+        value, _, fragment = value.partition("#")
         if fragment:
             return value, percent_decode(fragment)
         else:
@@ -559,7 +610,7 @@ class URI(Part):
         else:
             return None, Path(value)
 
-    def __new__(cls, value):
+    def __new__(cls, value=None):
         if isinstance(value, cls):
             return value
         inst = super(cls, URI).__new__(cls)
@@ -596,7 +647,7 @@ class URI(Part):
 
     __string = NotImplemented
 
-    def __init__(self, value):
+    def __init__(self, value=None):
         Part.__init__(self)
 
     def __hash__(self):
@@ -1023,4 +1074,114 @@ class URI(Part):
                 target.__authority = self.__authority
             target.__scheme = self.__scheme
         target.__fragment = reference.__fragment
+        return target
+
+    def with_hierarchical_part(self, string):
+        target = URI(None)
+        target.__scheme = self.__scheme
+        target.__authority, target.__path = self._parse_hierarchical_part(string)
+        target.__query = self.__query
+        target.__fragment = self.__fragment
+        return target
+
+    def with_absolute_path_reference(self, string):
+        target = URI(None)
+        target.__scheme = self.__scheme
+        target.__authority = self.__authority
+        string, target.__fragment = self._partition_fragment(string)
+        string, target.__query = self._partition_query(string)
+        target.__path = Path(string)
+        return target
+
+    def with_authority(self, string):
+        target = URI(None)
+        target.__scheme = self.__scheme
+        target.__authority = Authority(string)
+        target.__path = self.__path
+        target.__query = self.__query
+        target.__fragment = self.__fragment
+        return target
+
+    def with_scheme(self, string):
+        target = URI(None)
+        target.__scheme = percent_decode(string)
+        target.__authority = self.__authority
+        target.__path = self.__path or Path("")
+        target.__query = self.__query
+        target.__fragment = self.__fragment
+        return target
+
+    def with_user_info(self, string):
+        target = URI(None)
+        target.__scheme = self.__scheme
+        if self.__authority:
+            target.__authority = self.__authority.with_user_info(string)
+        else:
+            target.__authority = Authority().with_user_info(string)
+        target.__path = self.__path or Path("")
+        target.__query = self.__query
+        target.__fragment = self.__fragment
+        return target
+
+    def with_host_port(self, string):
+        target = URI(None)
+        target.__scheme = self.__scheme
+        if self.__authority:
+            target.__authority = self.__authority.with_host_port(string)
+        else:
+            target.__authority = Authority().with_host_port(string)
+        target.__path = self.__path or Path("")
+        target.__query = self.__query
+        target.__fragment = self.__fragment
+        return target
+
+    def with_host(self, string):
+        target = URI(None)
+        target.__scheme = self.__scheme
+        if self.__authority:
+            target.__authority = self.__authority.with_host(string)
+        else:
+            target.__authority = Authority().with_host(string)
+        target.__path = self.__path or Path("")
+        target.__query = self.__query
+        target.__fragment = self.__fragment
+        return target
+
+    def with_port(self, value):
+        target = URI(None)
+        target.__scheme = self.__scheme
+        if self.__authority:
+            target.__authority = self.__authority.with_port(value)
+        else:
+            target.__authority = Authority().with_port(value)
+        target.__path = self.__path or Path("")
+        target.__query = self.__query
+        target.__fragment = self.__fragment
+        return target
+
+    def with_path(self, string):
+        target = URI(None)
+        target.__scheme = self.__scheme
+        target.__authority = self.__authority
+        target.__path = Path(string)
+        target.__query = self.__query
+        target.__fragment = self.__fragment
+        return target
+
+    def with_query(self, string):
+        target = URI(None)
+        target.__scheme = self.__scheme
+        target.__authority = self.__authority
+        target.__path = self.__path or Path("")
+        target.__query = Query(string)
+        target.__fragment = self.__fragment
+        return target
+
+    def with_fragment(self, string):
+        target = URI(None)
+        target.__scheme = self.__scheme
+        target.__authority = self.__authority
+        target.__path = self.__path or Path("")
+        target.__query = self.__query
+        target.__fragment = percent_decode(string)
         return target

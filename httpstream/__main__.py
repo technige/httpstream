@@ -23,11 +23,19 @@ import sys
 from . import get, download
 
 
-if __name__ == "__main__":
-    command, args = sys.argv[0], sys.argv[1:]
+def _help(script):
+    print("Usage: {script}", script=script)
+
+
+def main():
+    script, args = sys.argv[0], sys.argv[1:]
     if len(args) == 1:
         sys.stdout.write(get(args[0]).content)
     elif len(args) == 2:
         download(args[0], args[1])
     else:
-        print("Usage: foo bar")
+        _help(script)
+
+
+if __name__ == "__main__":
+    main()

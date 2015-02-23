@@ -29,7 +29,10 @@ __email__ = "nigel@nigelsmall.com"
 __license__ = "Apache License, Version 2.0"
 __version__ = "1.5.0"
 
+
 from .http import *
+from .rfc3986 import *
+from .rfc6570 import *
 from .watch import watch
 
 

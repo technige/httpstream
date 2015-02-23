@@ -43,9 +43,10 @@ import ssl
 import sys
 from xml.dom.minidom import parseString
 
-from .packages.urimagic import URI, URITemplate
-from .packages.urimagic.util import xstr
-from .packages.urimagic.kvlist import KeyValueList  # no point in another copy
+from .rfc3986 import URI
+from .rfc6570 import URITemplate
+from .util import xstr
+from .kvlist import KeyValueList  # no point in another copy
 
 from . import __version__
 from .jsonencoder import JSONEncoder

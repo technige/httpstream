@@ -16,21 +16,16 @@
 # limitations under the License.
 
 
-"""
-An implementation of URIs and URI Templates from RFC 3986 (URI Generic Syntax)
-and RFC 6570 (URI Template) respectively.
-"""
-
-
 from __future__ import unicode_literals
 
-
-__author__ = "Nigel Small"
-__copyright__ = "2013-2014, Nigel Small"
-__email__ = "nigel@nigelsmall.com"
-__license__ = "Apache License, Version 2.0"
-__version__ = "1.2.0"
+from httpstream.rfc3986 import Part
 
 
-from .rfc3986 import *
-from .rfc6570 import *
+def test_part_string_not_implemented():
+    part = Part()
+    try:
+        part.string()
+    except NotImplementedError:
+        assert True
+    else:
+        assert False
