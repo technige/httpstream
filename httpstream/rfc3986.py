@@ -38,6 +38,8 @@ __all__ = ["general_delimiters", "subcomponent_delimiters",
            "reserved", "unreserved", "percent_encode", "percent_decode",
            "ParameterString", "Authority", "Path", "Query", "URI"]
 
+percent_codes = dict(zip(bytes(bytearray(range(256))),
+                         [bstr("%" + hex(n)[2:].upper().zfill(2)) for n in range(256)]))
 unhex = dict(zip(b"0123456789ABCDEFabcdef", list(range(0, 16)) + list(range(10, 16))))
 
 # RFC 3986 § 2.2.
@@ -46,9 +48,9 @@ subcomponent_delimiters = "!$&'()*+,;="
 reserved = general_delimiters + subcomponent_delimiters
 
 # RFC 3986 § 2.3.
-unreserved = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-              "abcdefghijklmnopqrstuvwxyz"
-              "0123456789-._~")
+unreserved = bstr("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                  "abcdefghijklmnopqrstuvwxyz"
+                  "0123456789-._~")
 
 
 # RFC 3986 § 2.1.
@@ -69,17 +71,17 @@ def percent_encode(data, safe=None):
             key + "=" + percent_encode(value, safe=safe)
             for key, value in data.items()
         )
-    if not safe:
-        safe = ""
-    try:
-        chars = list(data)
-    except TypeError:
-        chars = list(ustr(data))
+    unreserved_and_safe = unreserved + bstr(safe or b"")
+    chars = bstr(data)
+    out = []
+    p = 0
     for i, char in enumerate(chars):
-        if char == "%" or (char not in unreserved and char not in safe):
-            chars[i] = "".join("%" + hex(b)[2:].upper().zfill(2)
-                               for b in bytearray(char, "utf-8"))
-    return "".join(chars)
+        if char == b"%" or (char not in unreserved_and_safe):
+            out.append(chars[p:i])
+            out.append(percent_codes[char])
+            p = i + 1
+    out.append(chars[p:])
+    return xstr(b"".join(out))
 
 
 def percent_decode(data):
