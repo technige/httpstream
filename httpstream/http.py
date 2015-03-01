@@ -54,7 +54,7 @@ from .numbers import *
 
 
 __all__ = ["NetworkAddressError", "SocketError", "RedirectionError", "Request",
-           "Response", "TextResponse", "JSONResponse", "XMLResponse",
+           "Response", "TextResponse", "HTMLResponse", "JSONResponse", "XMLResponse",
            "Redirection", "ClientError", "ServerError", "Resource",
            "ResourceTemplate", "ContentConsumed"]
 

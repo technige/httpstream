@@ -20,7 +20,7 @@ from __future__ import unicode_literals
 
 from jsonstream import assembled, grouped
 
-from httpstream import http, Resource, ResourceTemplate, RedirectionError, TextResponse, JSONResponse
+from httpstream import http, Resource, ResourceTemplate, RedirectionError, TextResponse, JSONResponse, HTMLResponse
 from httpstream.numbers import *
 
 
@@ -246,3 +246,10 @@ def test_auto_populate_uri_scheme():
     resource = Resource("nigelsmall.com")
     response = resource.get()
     assert response.uri == "http://nigelsmall.com"
+
+
+def test_can_get_simple_html_resource():
+    resource = Resource("http://localhost:8080/document")
+    response = resource.get()
+    assert isinstance(response, HTMLResponse)
+    # TODO: more testing on the actual content

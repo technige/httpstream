@@ -20,7 +20,7 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
-from bottle import get, put, post, delete, request, run, redirect, abort
+from bottle import get, put, post, delete, request, response, run, redirect, abort
 
 
 LOREM_IPSUM = """\
@@ -55,6 +55,19 @@ GENESIS = u"""\
 יב  וַתּוֹצֵא הָאָרֶץ דֶּשֶׁא עֵשֶׂב מַזְרִיעַ זֶרַע, לְמִינֵהוּ, וְעֵץ עֹשֶׂה-פְּרִי אֲשֶׁר זַרְעוֹ-בוֹ, לְמִינֵהוּ; וַיַּרְא אֱלֹהִים, כִּי-טוֹב.
 """
 
+DOCUMENT = u"""\
+<!doctype html>
+<html>
+  <head>
+    <title>Page Title</title>
+  </head>
+  <body>
+    <h1>Page Title</h1>
+    <p>{text}</p>
+  </body>
+</html>
+""".format(text=LOREM_IPSUM)
+
 OBJECT = {"one": 1, "two": 2, "three": 3}
 
 PEOPLE = {
@@ -78,11 +91,13 @@ PEOPLE = {
 
 @get('/hello')
 def get_hello():
+    response.content_type = "text/plain; charset=utf-8"
     return "hello, world"
 
 
 @put('/hello')
 def put_hello():
+    response.content_type = "text/plain; charset=utf-8"
     name = request.body.read().decode("utf-8")
     message = "hello, " + name
     if request.headers.get("X-Upper-Case"):
@@ -93,27 +108,32 @@ def put_hello():
 
 @post('/hello')
 def post_hello():
+    response.content_type = "text/plain; charset=utf-8"
     name = request.body.read().decode("utf-8")
     return "hello, world and " + name
 
 
 @delete('/hello')
 def delete_hello():
+    response.content_type = "text/plain; charset=utf-8"
     return "goodbye, cruel world"
 
 
 @get('/lorem_ipsum')
 def lorem_ipsum():
+    response.content_type = "text/plain; charset=utf-8"
     return LOREM_IPSUM
 
 
 @get('/war_and_peace')
 def war_and_peace():
+    response.content_type = "text/plain; charset=utf-8"
     return WAR_AND_PEACE
 
 
 @get('/genesis')
 def genesis():
+    response.content_type = "text/plain; charset=utf-8"
     return GENESIS
 
 
@@ -151,7 +171,13 @@ def infinity():
 
 @get('/user_agent')
 def user_agent():
+    response.content_type = "text/plain; charset=utf-8"
     return request.headers.get("User-Agent")
+
+
+@get('/document')
+def document():
+    return DOCUMENT
 
 
 if __name__ == "__main__":
