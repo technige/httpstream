@@ -471,7 +471,9 @@ class Response(object):
             content_type = content_type_header.partition(";")[0].strip()
         else:
             content_type = None
-        if content_type in json_content_types:
+        if content_type == "text/html":
+            cls = HTMLResponse
+        elif content_type in json_content_types:
             cls = JSONResponse
         elif content_type in ("application/xml",):
             cls = XMLResponse
@@ -832,6 +834,34 @@ class TextResponse(Response):
         """ Iterate through the content as lines of text.
         """
         return self.lines()
+
+
+class HTMLResponse(Response):
+
+    def __init__(self, *args, **kwargs):
+        super(HTMLResponse, self).__init__(*args, **kwargs)
+        self.__cached = None
+
+    @property
+    def __content(self):
+        try:
+            from bs4 import BeautifulSoup
+        except ImportError:
+            return super(HTMLResponse, self).content
+        else:
+            return BeautifulSoup(super(HTMLResponse, self).content)
+
+    @property
+    def content(self):
+        """ Fetch all content, decoding from HTML and returning a soup if
+        BeautifulSoup is installed, otherwise raw content.
+        """
+        if self.cache:
+            if self.__cached is None:
+                self.__cached = self.__content
+            return self.__cached
+        else:
+            return self.__content
 
 
 class JSONResponse(TextResponse):
