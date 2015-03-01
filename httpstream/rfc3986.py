@@ -26,7 +26,7 @@ See: http://www.ietf.org/rfc/rfc3986.txt
 from __future__ import unicode_literals
 
 from .kvlist import KeyValueList
-from .util import bstr, ustr, xstr
+from .util import bstr, ustr
 
 
 __all__ = ["general_delimiters", "subcomponent_delimiters",
