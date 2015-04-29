@@ -40,11 +40,7 @@ setup(
     author=__author__,
     author_email=__email__,
     url="http://nigelsmall.com/httpstream",
-    packages=[
-        "httpstream",
-	"httpstream.packages",
-	"httpstream.packages.urimagic",
-    ],
+    packages=["httpstream"],
     install_requires=[
         "jsonstream>=1.0.0",
     ],
